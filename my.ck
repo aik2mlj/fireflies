@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 // window size
-1024 => int WINDOW_SIZE;
+128 => int WINDOW_SIZE;
 // y position of spectrum
 -2.5 => float SPECTRUM_Y;
 // y offset of firefly and waveform
@@ -21,28 +21,33 @@
 // waterfall depth
 64 => int WATERFALL_DEPTH;
 // interpolation constant
-0.03 => float FLEX;
+0.05 => float FLEX;
 // firefly color
 @(255, 230, 109)/255.0 => vec3 FIREFLY_COLOR;
 // bloom intensity
 0.8 => float BLOOM_INTENSITY;
 // firefly color intensity
 3 => float INTENSITY;
+// POW CRISP
+0.8 => float CRISP;
 
 // window title
 GWindow.title( "firefly" );
 // uncomment to fullscreen
 GWindow.fullscreen();
-// position camera
-GG.scene().camera().posZ(8.0);
+
+GOrbitCamera cam --> GG.scene();
+cam.posZ(8.0);
+cam.lookAt(@(0,0,0));
+GG.scene().camera(cam);
 
 // firefly
 // TODO: tweak params
 SphereGeometry sphere_geo(0.05, 32, 16, 0., 2*Math.pi, 0., Math.pi);
 FlatMaterial mat;
 mat.color(FIREFLY_COLOR * INTENSITY);
-GMesh sphere(sphere_geo, mat) --> GG.scene();
-@(0, FIREFLY_Y, 0) => sphere.translate;
+GMesh firefly(sphere_geo, mat) --> GG.scene();
+@(0, FIREFLY_Y, 0) => firefly.translate;
 
 // waveform renderer
 GLines waveform --> GG.scene();
@@ -52,8 +57,20 @@ waveform.rotY(WAVEFORM_ROT_Y);
 waveform.translate(@(0, -WAVEFORM_WIDTH/2 * Math.cos(WAVEFORM_ROT_Y) + FIREFLY_Y, -WAVEFORM_WIDTH/2 * Math.sin(WAVEFORM_ROT_Y)));
 // waveform.posZ()
 // waveform.posY(FIREFLY_Y - WAVEFORM_WIDTH / 2);
-waveform.width(.02);
+waveform.width(.04);
 waveform.color(FIREFLY_COLOR);
+
+// many fireflies out there
+60 => int FIREFLY_NUM;
+SphereGeometry sphere_geo_many(0.02, 32, 16, 0., 2*Math.pi, 0., Math.pi);
+FlatMaterial mat_many;
+mat_many.color(FIREFLY_COLOR);
+GMesh fireflies[FIREFLY_NUM];
+for (int i; i < FIREFLY_NUM; i++) {
+    GMesh sphere(sphere_geo_many, mat_many) @=> fireflies[i];
+    fireflies[i] --> GG.scene();
+    @(Math.random2f(-5, 5), Math.random2f(-5, 1), Math.random2f(-5, 5)) => fireflies[i].translate;
+}
 
 // global blooming effect
 GG.outputPass() @=> OutputPass output_pass;
@@ -68,8 +85,13 @@ output_pass.input(bloom_pass.colorOutput());
 // waterfall.posY( SPECTRUM_Y );
 
 // which input?
-// adc => Gain input;
-SinOsc sine => Gain input => dac; .15 => sine.gain;
+adc => Gain input;
+// SinOsc sine => Gain input => dac; .15 => sine.gain;
+// estimate loudness
+input => Gain gi => OnePole onepole => blackhole;
+input => gi;
+4 => gi.op;
+0.999 => onepole.pole;
 // accumulate samples from mic
 input => Flip accum => blackhole;
 // take the FFT
@@ -175,7 +197,7 @@ fun void map2waveform( float in[], vec2 out[] )
     {
         // space evenly in X
         -width/2 + width/WINDOW_SIZE*i => out[i].x;
-        in[i] * 5 * window[i] => mag[i];
+        in[i] * 10 * window[i+20] => mag[i];
         // interpolation
         pre_mag[i] + (mag[i] - pre_mag[i]) * FLEX => mag[i];
         // map y, using window function to taper the ends
@@ -236,7 +258,34 @@ fun void controlSine( Osc s )
         10::ms => now;
     }
 }
-spork ~ controlSine( sine );
+// spork ~ controlSine( sine );
+
+fun void brightness_change() {  
+    float prev;
+    float curr;
+    0.6 => float slewUp;
+    0.05 => float slewDown;
+    while (true) {
+        GG.nextFrame() => now;
+        // get current signal strength
+        Math.pow(onepole.last(), CRISP) => curr;
+        
+        // interpolate
+        if (prev < curr)
+            prev + (curr - prev) * slewUp => curr;
+        else
+            prev + (curr - prev) * slewDown => curr;
+        
+        // change color of circle
+        curr * FIREFLY_COLOR * INTENSITY => mat.color;
+        curr * FIREFLY_COLOR => mat_many.color;
+        Math.atan(curr) => bloom_pass.radius;
+        
+        // update previous value
+        curr => prev;
+    }
+}
+spork ~ brightness_change();
 
 // graphics render loop
 while( true )
