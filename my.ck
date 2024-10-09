@@ -9,7 +9,7 @@
 //-----------------------------------------------------------------------------
 
 // window size
-128 => int WINDOW_SIZE;
+256 => int WINDOW_SIZE;
 // y position of spectrum
 -2.5 => float SPECTRUM_Y;
 // y offset of firefly and waveform
@@ -22,8 +22,9 @@
 64 => int WATERFALL_DEPTH;
 // interpolation constant
 0.05 => float FLEX;
-// firefly color
+// colors
 @(255, 230, 109)/255.0 => vec3 FIREFLY_COLOR;
+@(218, 232, 241)/255.0 => vec3 MOON_COLOR;
 // bloom intensity
 0.8 => float BLOOM_INTENSITY;
 // firefly color intensity
@@ -71,6 +72,16 @@ for (int i; i < FIREFLY_NUM; i++) {
     fireflies[i] --> GG.scene();
     @(Math.random2f(-5, 5), Math.random2f(-5, 1), Math.random2f(-5, 5)) => fireflies[i].translate;
 }
+
+// moon
+SphereGeometry sphere_moon(0.4, 32, 16, 0., 2*Math.pi, 0., Math.pi/2);
+FlatMaterial mat_moon;
+mat_moon.color(MOON_COLOR);
+GMesh moon(sphere_moon, mat_moon) --> GG.scene();
+@(3, 3, -2) => moon.translate;
+-Math.pi / 2 => moon.rotZ;
+-1 => moon.rotX;
+
 
 // global blooming effect
 GG.outputPass() @=> OutputPass output_pass;
@@ -279,7 +290,7 @@ fun void brightness_change() {
         // change color of circle
         curr * FIREFLY_COLOR * INTENSITY => mat.color;
         curr * FIREFLY_COLOR => mat_many.color;
-        Math.atan(curr) => bloom_pass.radius;
+        Math.map(Math.atan(curr), 0, 1.3, 0.3, 0.6) => bloom_pass.radius;
         
         // update previous value
         curr => prev;
