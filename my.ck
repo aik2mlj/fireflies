@@ -19,18 +19,21 @@
 // waveform rotation angle along Y
 -1.5 => float WAVEFORM_ROT_Y;
 // waterfall depth
-64 => int WATERFALL_DEPTH;
+640 => int WATERFALL_DEPTH;
 // interpolation constant
-0.05 => float FLEX;
+0.5 => float FLEX;
 // colors
 @(255, 230, 109)/255.0 => vec3 FIREFLY_COLOR;
 @(218, 232, 241)/255.0 => vec3 MOON_COLOR;
+@(2, 48, 32)/255.0 => vec3 FOREST_COLOR;
 // bloom intensity
 0.8 => float BLOOM_INTENSITY;
 // firefly color intensity
 3 => float INTENSITY;
 // POW CRISP
 0.8 => float CRISP;
+// waterfall
+40 => float DISPLAY_WIDTH;
 
 // window title
 GWindow.title( "firefly" );
@@ -74,14 +77,29 @@ for (int i; i < FIREFLY_NUM; i++) {
 }
 
 // moon
-SphereGeometry sphere_moon(0.4, 32, 16, 0., 2*Math.pi, 0., Math.pi/2);
-FlatMaterial mat_moon;
-mat_moon.color(MOON_COLOR);
-GMesh moon(sphere_moon, mat_moon) --> GG.scene();
-@(3, 3, -2) => moon.translate;
--Math.pi / 2 => moon.rotZ;
--1 => moon.rotX;
+// SphereGeometry sphere_moon(0.4, 32, 16, 0., 2*Math.pi, 0., Math.pi/2);
+// FlatMaterial mat_moon;
+// mat_moon.color(MOON_COLOR * 0.5);
+// GMesh moon(sphere_moon, mat_moon) --> GG.scene();
+// @(3, 3, -2) => moon.translate;
+// -Math.pi / 2 => moon.rotZ;
+// -1 => moon.rotX;
 
+// ground
+GPlane ground --> GG.scene();
+@(5,5,5) => ground.color;
+50 => float SCALE;
+SCALE => ground.sca;
+16./9. * SCALE => ground.scaX;
+Math.pi => ground.rotX;
+@(0, 0, -50) => ground.translate;
+
+Texture.load(me.dir() + "./imgs/twilight.jpg" ) @=> Texture tex;
+ground.colorMap(tex);
+
+// remove light
+GG.scene().light() @=> GLight light;
+0. => light.intensity;
 
 // global blooming effect
 GG.outputPass() @=> OutputPass output_pass;
@@ -91,9 +109,9 @@ bloom_pass.input(GG.renderPass().colorOutput());
 output_pass.input(bloom_pass.colorOutput());
 
 // make a waterfall
-// Waterfall waterfall --> GG.scene();
+Waterfall waterfall --> GG.scene();
 // translate down
-// waterfall.posY( SPECTRUM_Y );
+waterfall.posY( SPECTRUM_Y );
 
 // which input?
 adc => Gain input;
@@ -120,8 +138,6 @@ Windowing.hann(WINDOW_SIZE*2) @=> float window[];
 
 // sample array
 float samples[WINDOW_SIZE];
-float mag[WINDOW_SIZE];
-float pre_mag[WINDOW_SIZE];
 // FFT response
 complex response[0];
 // a vector to hold positions
@@ -135,7 +151,7 @@ class Waterfall extends GGen
     // lines
     GLines wfl[WATERFALL_DEPTH];
     // color
-    @(.4, 1, .4) => vec3 color;
+    @(.01, .01, .01) => vec3 color;
 
     // iterate over line GGens
     for( GLines w : wfl )
@@ -143,9 +159,9 @@ class Waterfall extends GGen
         // aww yea, connect as a child of this GGen
         w --> this;
         // line width
-        w.width(.01);
+        w.width(0.1);
         // color
-        w.color( @(.4, 1, .4) );
+        w.color( color );
     }
 
     // copy
@@ -180,7 +196,7 @@ class Waterfall extends GGen
 // keyboard controls and getting audio from dac
 fun void kbListener()
 {
-    SndBuf buf => dac;
+    SndBuf buf => input;
     .0 => buf.gain;
     "special:dope" => buf.read;
     while (true) {
@@ -193,6 +209,8 @@ fun void kbListener()
 } 
 spork ~ kbListener();
 
+float magwf[WINDOW_SIZE];
+float pre_magwf[WINDOW_SIZE];
 // map audio buffer to 3D positions
 fun void map2waveform( float in[], vec2 out[] )
 {
@@ -204,43 +222,57 @@ fun void map2waveform( float in[], vec2 out[] )
     
     // mapping to xyz coordinate
     WAVEFORM_WIDTH => float width;
+    0.05 => float neg_flex;
+    0.2 => float pos_flex;
     for( 0 => int i; i < in.size(); i++ )
     {
         // space evenly in X
         -width/2 + width/WINDOW_SIZE*i => out[i].x;
-        in[i] * 10 * window[i+20] => mag[i];
+        in[i] * 10 * window[i+20] => magwf[i];
         // interpolation
-        pre_mag[i] + (mag[i] - pre_mag[i]) * FLEX => mag[i];
+        if (pre_magwf[i] > magwf[i])
+            pre_magwf[i] + (magwf[i] - pre_magwf[i]) * neg_flex => magwf[i];
+        else
+            pre_magwf[i] + (magwf[i] - pre_magwf[i]) * pos_flex => magwf[i];
         // map y, using window function to taper the ends
-        mag[i] => out[i].y;
-        mag[i] => pre_mag[i];
+        magwf[i] => out[i].y;
+        magwf[i] => pre_magwf[i];
     }
 }
 
+float magspec[WINDOW_SIZE];
+float pre_magspec[WINDOW_SIZE];
 // map FFT output to 3D positions
-// fun void map2spectrum( complex in[], vec2 out[] )
-// {
-//     if( in.size() != out.size() )
-//     {
-//         <<< "size mismatch in map2spectrum()", "" >>>;
-//         return;
-//     }
-    
-//     // mapping to xyz coordinate
-//     int i;
-//     DISPLAY_WIDTH => float width;
-//     for( auto s : in )
-//     {
-//         // space logarithmically in X
-//         -width/2 + width * Math.log(i + 1) / Math.log(WINDOW_SIZE) => out[i].x;
-//         // map frequency bin magnitide in Y
-//         5 * Math.sqrt( (s$polar).mag * 25 ) => out[i].y;
-//         // increment
-//         i++;
-//     }
+fun void map2spectrum( complex in[], vec2 out[] )
+{
+    if( in.size() != out.size() )
+    {
+        <<< "size mismatch in map2spectrum()", "" >>>;
+        return;
+    }
 
-//     waterfall.latest( out );
-// }
+    // mapping to xyz coordinate
+    DISPLAY_WIDTH => float width;
+    0.02 => float neg_flex;
+    0.04 => float pos_flex;
+    for( 0 => int i; i < in.size(); i++ )
+    {
+        // space logarithmically in X
+        -width/2 + width * Math.log(i + 1) / Math.log(WINDOW_SIZE) => out[i].x;
+        // map frequency bin magnitide in Y
+        15 * Math.sqrt( (in[i]$polar).mag * 25 ) => magspec[i];
+        // interpolation
+        if (pre_magspec[i] > magspec[i])
+            pre_magspec[i] + (magspec[i] - pre_magspec[i]) * neg_flex => magspec[i];
+        else
+            pre_magspec[i] + (magspec[i] - pre_magspec[i]) * pos_flex => magspec[i];
+        // map y, using window function to taper the ends
+        magspec[i] => out[i].y;
+        magspec[i] => pre_magspec[i];
+    }
+
+    waterfall.latest( out );
+}
 
 // do audio stuff
 fun void doAudio()
@@ -306,7 +338,7 @@ while( true )
     // set the mesh position
     waveform.positions( positions );
     // map to spectrum display
-    // map2spectrum( response, positions );
+    map2spectrum( response, positions );
 
     // next graphics frame
     GG.nextFrame() => now;
