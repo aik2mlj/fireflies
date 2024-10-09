@@ -11,7 +11,7 @@
 // window size
 256 => int WINDOW_SIZE;
 // y position of spectrum
--2.5 => float SPECTRUM_Y;
+-3.5 => float SPECTRUM_Y;
 // y offset of firefly and waveform
 -1 => float FIREFLY_Y;
 // width of waveform and spectrum display
@@ -19,7 +19,7 @@
 // waveform rotation angle along Y
 -1.5 => float WAVEFORM_ROT_Y;
 // waterfall depth
-640 => int WATERFALL_DEPTH;
+64 => int WATERFALL_DEPTH;
 // interpolation constant
 0.5 => float FLEX;
 // colors
@@ -79,15 +79,15 @@ for (int i; i < FIREFLY_NUM; i++) {
 // moon
 // SphereGeometry sphere_moon(0.4, 32, 16, 0., 2*Math.pi, 0., Math.pi/2);
 // FlatMaterial mat_moon;
-// mat_moon.color(MOON_COLOR * 0.5);
+// mat_moon.color(MOON_COLOR * 0.1);
 // GMesh moon(sphere_moon, mat_moon) --> GG.scene();
-// @(3, 3, -2) => moon.translate;
+// @(4.3, 2, -2) => moon.translate;
 // -Math.pi / 2 => moon.rotZ;
 // -1 => moon.rotX;
 
 // ground
 GPlane ground --> GG.scene();
-@(5,5,5) => ground.color;
+@(2,2,2) => ground.color;
 50 => float SCALE;
 SCALE => ground.sca;
 16./9. * SCALE => ground.scaX;
@@ -96,6 +96,11 @@ Math.pi => ground.rotX;
 
 Texture.load(me.dir() + "./imgs/twilight.jpg" ) @=> Texture tex;
 ground.colorMap(tex);
+
+// tree obj
+// AssLoader ass_loader;
+// ass_loader.loadObj( me.dir() + "./data/suzanne.obj" ) @=> GGen@ tree;
+// tree --> GG.scene();
 
 // remove light
 GG.scene().light() @=> GLight light;
@@ -230,7 +235,7 @@ fun void map2waveform( float in[], vec2 out[] )
         -width/2 + width/WINDOW_SIZE*i => out[i].x;
         in[i] * 10 * window[i+20] => magwf[i];
         // interpolation
-        if (pre_magwf[i] > magwf[i])
+        if (Math.fabs(pre_magwf[i]) > Math.fabs(magwf[i]))
             pre_magwf[i] + (magwf[i] - pre_magwf[i]) * neg_flex => magwf[i];
         else
             pre_magwf[i] + (magwf[i] - pre_magwf[i]) * pos_flex => magwf[i];
