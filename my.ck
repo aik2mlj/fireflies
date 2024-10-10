@@ -313,6 +313,8 @@ fun void brightness_change() {
     float curr;
     0.6 => float slewUp;
     0.05 => float slewDown;
+
+    vec3 w_colors[WINDOW_SIZE];
     while (true) {
         GG.nextFrame() => now;
         // get current signal strength
@@ -325,17 +327,35 @@ fun void brightness_change() {
             prev + (curr - prev) * slewDown => curr;
         
         // change color of circle
-        curr * FIREFLY_COLOR * INTENSITY * 20 => mat.color;
+        curr * FIREFLY_COLOR * INTENSITY * 20 => vec3 firefly_color;
+        firefly_color => mat.color;
         curr * FIREFLY_COLOR * 20 => mat_many.color;
         Math.map(Math.atan(curr), 0, 0.06, 0.3, 0.6) => bloom_pass.radius;
+
+        // change gradient color for trace (waveform)
+        firefly_color * 2 => w_colors[0];
+        for (1 => int i; i < w_colors.size(); i++) {
+            w_colors[i - 1] * 0.9 + w_colors[i] * 0.085 * (1 - i / w_colors.size()) => w_colors[i];
+        }
+        waveform.colors(w_colors);
+
         // <<< curr >>>;
-        <<< Math.atan(curr) >>>;
+        // <<< Math.atan(curr) >>>;
         
         // update previous value
         curr => prev;
     }
 }
 spork ~ brightness_change();
+
+fun void rotate_waveform() {
+    // rotate waveform at X axis
+    while (true) {
+        GG.nextFrame() => now;
+        5 * Math.random2f(-1, 1) * GG.dt() => waveform.rotateX;
+    }
+}
+spork ~ rotate_waveform();
 
 // graphics render loop
 while( true )
