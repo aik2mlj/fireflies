@@ -31,7 +31,7 @@
 // firefly color intensity
 3 => float INTENSITY;
 // POW CRISP
-0.8 => float CRISP;
+0.5 => float CRISP;
 // waterfall
 40 => float DISPLAY_WIDTH;
 
@@ -124,7 +124,7 @@ adc => Gain input;
 // estimate loudness
 input => Gain gi => OnePole onepole => blackhole;
 input => gi;
-4 => gi.op;
+3 => gi.op;
 0.999 => onepole.pole;
 // accumulate samples from mic
 input => Flip accum => blackhole;
@@ -189,7 +189,7 @@ class Waterfall extends GGen
         for( int i; i < wfl.size(); i++ )
         {
             // start with playhead-1 and go backwards
-            pos--; if( pos < 0 ) WATERFALL_DEPTH-1 => pos;
+            pos++; if( pos >= WATERFALL_DEPTH ) 0 => pos;
             // offset Z
             wfl[pos].posZ( -i );
             // set fade
@@ -325,9 +325,11 @@ fun void brightness_change() {
             prev + (curr - prev) * slewDown => curr;
         
         // change color of circle
-        curr * FIREFLY_COLOR * INTENSITY => mat.color;
-        curr * FIREFLY_COLOR => mat_many.color;
-        Math.map(Math.atan(curr), 0, 1.3, 0.3, 0.6) => bloom_pass.radius;
+        curr * FIREFLY_COLOR * INTENSITY * 20 => mat.color;
+        curr * FIREFLY_COLOR * 20 => mat_many.color;
+        Math.map(Math.atan(curr), 0, 0.06, 0.3, 0.6) => bloom_pass.radius;
+        // <<< curr >>>;
+        <<< Math.atan(curr) >>>;
         
         // update previous value
         curr => prev;
