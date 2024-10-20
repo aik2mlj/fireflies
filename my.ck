@@ -1,7 +1,7 @@
 //-----------------------------------------------------------------------------
 // name: sndpeek.ck
 // desc: sndpeek in ChuGL!
-// 
+//
 // author: Ge Wang (https://ccrma.stanford.edu/~ge/)
 //         Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
 //         Kunwoo Kim (https://https://kunwookim.com/)
@@ -235,7 +235,7 @@ fun void kbListener()
             0 => buf.pos;
         }
     }
-} 
+}
 spork ~ kbListener();
 
 float magwf[WINDOW_SIZE];
@@ -248,7 +248,7 @@ fun void map2waveform( float in[], vec2 out[] )
         <<< "size mismatch in map2waveform()", "" >>>;
         return;
     }
-    
+
     // mapping to xyz coordinate
     WAVEFORM_WIDTH => float width;
     0.05 => float neg_flex;
@@ -332,7 +332,7 @@ fun void controlSine( Osc s )
 }
 // spork ~ controlSine( sine );
 
-fun void brightness_change() {  
+fun void brightness_change() {
     float prev;
     float curr;
     0.6 => float slewUp;
@@ -343,13 +343,13 @@ fun void brightness_change() {
         GG.nextFrame() => now;
         // get current signal strength
         Math.pow(onepole.last(), CRISP) => curr;
-        
+
         // interpolate
         if (prev < curr)
             prev + (curr - prev) * slewUp => curr;
         else
             prev + (curr - prev) * slewDown => curr;
-        
+
         // change color of circle
         curr * FIREFLY_COLOR * INTENSITY * 20 => vec3 firefly_color;
         firefly_color => mat.color;
@@ -364,7 +364,7 @@ fun void brightness_change() {
 
         // <<< curr >>>;
         // <<< Math.atan(curr) >>>;
-        
+
         // update previous value
         curr => prev;
     }
@@ -468,7 +468,7 @@ while( true )
     // draw UI
     // if (UI.begin("Firefly")) {  // draw a UI window called "Tutorial"
     //     // scenegraph view of the current scene
-    //     UI.scenegraph(GG.scene()); 
+    //     UI.scenegraph(GG.scene());
     // }
     // UI.end(); // end of UI window, must match UI.begin(...)
 
