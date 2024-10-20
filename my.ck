@@ -26,6 +26,7 @@
 @(255, 230, 109)/255.0 => vec3 FIREFLY_COLOR;
 @(218, 232, 241)/255.0 => vec3 MOON_COLOR;
 @(2, 48, 32)/255.0 => vec3 FOREST_COLOR;
+@(4, 26, 24)/255.0 * 0.5 => vec3 SPECTRUM_COLOR;
 // bloom intensity
 0.8 => float BLOOM_INTENSITY;
 // firefly color intensity
@@ -38,7 +39,7 @@
 // window title
 GWindow.title( "firefly" );
 // uncomment to fullscreen
-GWindow.fullscreen();
+// GWindow.fullscreen();
 
 GOrbitCamera cam --> GG.scene();
 cam.posZ(8.0);
@@ -85,17 +86,24 @@ for (int i; i < FIREFLY_NUM; i++) {
 // -Math.pi / 2 => moon.rotZ;
 // -1 => moon.rotX;
 
-// ground
-GPlane ground --> GG.scene();
-@(2,2,2) => ground.color;
+// landscape
+GPlane landscape --> GG.scene();
+@(2,2,2) => landscape.color;
 50 => float SCALE;
-SCALE => ground.sca;
-16./9. * SCALE => ground.scaX;
-Math.pi => ground.rotX;
-@(0, 0, -50) => ground.translate;
+SCALE => landscape.sca;
+16./9. * SCALE => landscape.scaX;
+Math.pi => landscape.rotX;
+@(0, 0, -50) => landscape.translate;
 
 Texture.load(me.dir() + "./imgs/twilight.jpg" ) @=> Texture tex;
-ground.colorMap(tex);
+landscape.colorMap(tex);
+
+// ground
+GPlane ground --> GG.scene();
+@(0,0,0) => ground.color;
+500 => ground.sca;
+Math.pi / 2 => ground.rotX;
+@(0, -8, 0) => ground.translate;
 
 // tree obj
 // AssLoader ass_loader;
@@ -119,7 +127,11 @@ Waterfall waterfall --> GG.scene();
 waterfall.posY( SPECTRUM_Y );
 
 // which input?
-adc => Gain input;
+// adc => Gain input;
+SndBuf buf(me.dir() + "data/Elijo.wav") => Gain input => dac;
+if( !buf.ready() ) me.exit();
+0.1 => buf.gain;
+
 // SinOsc sine => Gain input => dac; .15 => sine.gain;
 // estimate loudness
 input => Gain gi => OnePole onepole => blackhole;
@@ -155,8 +167,6 @@ class Waterfall extends GGen
     0 => int playhead;
     // lines
     GLines wfl[WATERFALL_DEPTH];
-    // color
-    @(.01, .01, .01) => vec3 color;
 
     // iterate over line GGens
     for( GLines w : wfl )
@@ -164,9 +174,9 @@ class Waterfall extends GGen
         // aww yea, connect as a child of this GGen
         w --> this;
         // line width
-        w.width(0.1);
+        w.width(0.2);
         // color
-        w.color( color );
+        w.color( SPECTRUM_COLOR );
     }
 
     // copy
@@ -191,9 +201,10 @@ class Waterfall extends GGen
             // start with playhead-1 and go backwards
             pos++; if( pos >= WATERFALL_DEPTH ) 0 => pos;
             // offset Z
-            wfl[pos].posZ( -i );
+            wfl[pos].posZ( -i + 3 );
+            wfl[pos].posY(i * 0.05);
             // set fade
-            wfl[pos].color( color * Math.pow(1.0 - (i$float / WATERFALL_DEPTH), 4) );
+            wfl[pos].color( SPECTRUM_COLOR * Math.pow(1.0 - (i$float / WATERFALL_DEPTH), 8) );
         }
     }
 }
@@ -259,13 +270,13 @@ fun void map2spectrum( complex in[], vec2 out[] )
     // mapping to xyz coordinate
     DISPLAY_WIDTH => float width;
     0.02 => float neg_flex;
-    0.04 => float pos_flex;
+    0.06 => float pos_flex;
     for( 0 => int i; i < in.size(); i++ )
     {
         // space logarithmically in X
         -width/2 + width * Math.log(i + 1) / Math.log(WINDOW_SIZE) => out[i].x;
         // map frequency bin magnitide in Y
-        15 * Math.sqrt( (in[i]$polar).mag * 25 ) => magspec[i];
+        50 * Math.sqrt( (in[i]$polar).mag) => magspec[i];
         // interpolation
         if (pre_magspec[i] > magspec[i])
             pre_magspec[i] + (magspec[i] - pre_magspec[i]) * neg_flex => magspec[i];
@@ -355,7 +366,7 @@ fun void rotate_waveform() {
         5 * Math.random2f(-1, 1) * GG.dt() => waveform.rotateX;
     }
 }
-spork ~ rotate_waveform();
+// spork ~ rotate_waveform();
 
 // graphics render loop
 while( true )
@@ -370,11 +381,11 @@ while( true )
     // next graphics frame
     GG.nextFrame() => now;
     // draw UI
-    if (UI.begin("Firefly")) {  // draw a UI window called "Tutorial"
-        // scenegraph view of the current scene
-        UI.scenegraph(GG.scene()); 
-    }
-    UI.end(); // end of UI window, must match UI.begin(...)
+    // if (UI.begin("Firefly")) {  // draw a UI window called "Tutorial"
+    //     // scenegraph view of the current scene
+    //     UI.scenegraph(GG.scene()); 
+    // }
+    // UI.end(); // end of UI window, must match UI.begin(...)
 
 }
 
