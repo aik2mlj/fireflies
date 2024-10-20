@@ -28,7 +28,7 @@
 @(2, 48, 32)/255.0 => vec3 FOREST_COLOR;
 @(4, 26, 24)/255.0 * 0.5 => vec3 SPECTRUM_COLOR;
 // bloom intensity
-0.8 => float BLOOM_INTENSITY;
+0.9 => float BLOOM_INTENSITY;
 // firefly color intensity
 3 => float INTENSITY;
 // POW CRISP
@@ -68,11 +68,20 @@ waveform.color(FIREFLY_COLOR);
 // many fireflies out there
 60 => int FIREFLY_NUM;
 SphereGeometry sphere_geo_many(0.02, 32, 16, 0., 2*Math.pi, 0., Math.pi);
-FlatMaterial mat_many;
-mat_many.color(FIREFLY_COLOR);
+FlatMaterial mat_many[FIREFLY_NUM];
+float init_time[FIREFLY_NUM];  // the initial time offset for each firefly
+float fade_freq[FIREFLY_NUM];  // fade in/out frequency of each firefly
+for (int i; i < FIREFLY_NUM; i++) {
+    Math.random2f(0.1, 3.) => fade_freq[i];
+    Math.random2f(0., 2.) => init_time[i];
+}
+for (auto x: mat_many) {
+    x.color(FIREFLY_COLOR * Math.random2f(0., 0.3));
+}
+
 GMesh fireflies[FIREFLY_NUM];
 for (int i; i < FIREFLY_NUM; i++) {
-    GMesh sphere(sphere_geo_many, mat_many) @=> fireflies[i];
+    GMesh sphere(sphere_geo_many, mat_many[i]) @=> fireflies[i];
     fireflies[i] --> GG.scene();
     @(Math.random2f(-5, 5), Math.random2f(-5, 1), Math.random2f(-5, 5)) => fireflies[i].translate;
 }
@@ -340,7 +349,6 @@ fun void brightness_change() {
         // change color of circle
         curr * FIREFLY_COLOR * INTENSITY * 20 => vec3 firefly_color;
         firefly_color => mat.color;
-        curr * FIREFLY_COLOR * 20 => mat_many.color;
         Math.map(Math.atan(curr), 0, 0.06, 0.3, 0.6) => bloom_pass.radius;
 
         // change gradient color for trace (waveform)
@@ -358,6 +366,19 @@ fun void brightness_change() {
     }
 }
 spork ~ brightness_change();
+
+fun void fade_in_out() {
+    // fireflies: fade in/out randomly
+    now => time init_t;
+    while (true) {
+        GG.nextFrame() => now;
+        (now - init_t) / 1::second => float t;
+        for (int i; i < FIREFLY_NUM; i++) {
+            FIREFLY_COLOR * 0.3 * Math.fabs(Math.sin(fade_freq[i] * t + init_time[i])) => mat_many[i].color;
+        }
+    }
+}
+spork ~ fade_in_out();
 
 fun void rotate_waveform() {
     // rotate waveform at X axis
