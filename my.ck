@@ -66,7 +66,7 @@ waveform.width(.04);
 waveform.color(FIREFLY_COLOR);
 
 // many fireflies out there
-60 => int FIREFLY_NUM;
+300 => int FIREFLY_NUM;
 SphereGeometry sphere_geo_many(0.02, 32, 16, 0., 2*Math.pi, 0., Math.pi);
 FlatMaterial mat_many[FIREFLY_NUM];
 float init_time[FIREFLY_NUM];  // the initial time offset for each firefly
@@ -80,10 +80,14 @@ for (auto x: mat_many) {
 }
 
 GMesh fireflies[FIREFLY_NUM];
+-10 => float minX => float minY;
+-50 => float minZ;
+10 => float maxX => float maxZ;
+1 => float maxY;
 for (int i; i < FIREFLY_NUM; i++) {
     GMesh sphere(sphere_geo_many, mat_many[i]) @=> fireflies[i];
     fireflies[i] --> GG.scene();
-    @(Math.random2f(-5, 5), Math.random2f(-5, 1), Math.random2f(-5, 5)) => fireflies[i].translate;
+    @(Math.random2f(minX, maxX), Math.random2f(minY, maxY), Math.random2f(minZ, maxZ)) => fireflies[i].translate;
 }
 
 // moon
@@ -379,6 +383,66 @@ fun void fade_in_out() {
     }
 }
 spork ~ fade_in_out();
+
+float vx[FIREFLY_NUM];
+float vy[FIREFLY_NUM];
+float vz[FIREFLY_NUM];
+fun void drifting() {
+    // fireflies drifting randomly with velocity randomization
+    0.01 => float acc_range;
+    0.1 => float speed;
+    2 => float edge_buf;
+    now => time init_t;
+    while (true) {
+        GG.nextFrame() => now;
+        (now - init_t) / 1::second => float t;
+        for (int i; i < FIREFLY_NUM; i++) {
+            Math.random2f(-acc_range, acc_range) +=> vx[i];
+            Math.random2f(-acc_range, acc_range) +=> vy[i];
+            Math.random2f(-acc_range, acc_range) +=> vz[i];
+
+            fireflies[i].pos() => vec3 pos;
+
+            // soft boundary
+            // if (pos.x < minX + edge_buf || pos.x > maxX - edge_buf)
+            //     0.9 *=> vx[i];
+            // if (pos.y < minY + edge_buf || pos.y > maxY - edge_buf)
+            //     0.9 *=> vy[i];
+            // if (pos.z < minZ + edge_buf || pos.z > maxZ - edge_buf)
+            //     0.9 *=> vz[i];
+            // soft center
+            if (Math.fabs(pos.x) < edge_buf || Math.fabs(pos.x) - 5 < edge_buf || Math.fabs(pos.x) + 5 < edge_buf)
+                0.99 *=> vx[i];
+            if (Math.fabs(pos.y) < edge_buf)
+                0.99 *=> vy[i];
+            if (Math.fabs(pos.z) < edge_buf * 5)
+                0.99 *=> vz[i];
+            // boundary reflection
+            if (pos.x < minX || pos.x > maxX)
+                -0.99 *=> vx[i];
+            if (pos.y < minY || pos.y > maxY)
+                -0.99 *=> vy[i];
+            if (pos.z < minZ || pos.z > maxZ)
+                -0.99 *=> vz[i];
+            // wrapping
+            // if (pos.x < minX)
+            //     maxX => pos.x;
+            // else if (pos.x > maxX)
+            //     minX => pos.x;
+            // if (pos.y < minY)
+            //     maxY => pos.y;
+            // else if (pos.y > maxY)
+            //     minY => pos.y;
+            // if (pos.z < minZ)
+            //     maxZ => pos.z;
+            // else if (pos.z > maxZ)
+            //     minZ => pos.z;
+
+            @(vx[i] * speed + pos.x, vy[i] * speed + pos.y, vz[i] * speed + pos.z) => fireflies[i].pos;
+        }
+    }
+}
+spork ~ drifting();
 
 fun void rotate_waveform() {
     // rotate waveform at X axis
