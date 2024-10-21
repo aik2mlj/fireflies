@@ -1,11 +1,9 @@
 //-----------------------------------------------------------------------------
-// name: sndpeek.ck
-// desc: sndpeek in ChuGL!
+// name: firefly.ck
+// desc: audiovisual design for MUSIC256A
 //
-// author: Ge Wang (https://ccrma.stanford.edu/~ge/)
-//         Andrew Zhu Aday (https://ccrma.stanford.edu/~azaday/)
-//         Kunwoo Kim (https://https://kunwookim.com/)
-// date: Fall 2023
+// author: Lejun Min (https://aik2.site)
+// date: Fall 2024
 //-----------------------------------------------------------------------------
 
 // window size
@@ -216,8 +214,8 @@ class Waterfall extends GGen
             // start with playhead-1 and go backwards
             pos++; if( pos >= WATERFALL_DEPTH ) 0 => pos;
             // offset Z
-            wfl[pos].posZ( -i + 3 );
-            wfl[pos].posY(i * 0.05);
+            wfl[pos].posZ( -i + 5 );
+            // wfl[pos].posY(i * 0.05 - 3);
             // set fade
             wfl[pos].color( SPECTRUM_COLOR * Math.pow(1.0 - (i$float / WATERFALL_DEPTH), 8) );
         }
