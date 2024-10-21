@@ -21,10 +21,10 @@
 // interpolation constant
 0.5 => float FLEX;
 // colors
-@(255, 230, 109)/255.0 => vec3 FIREFLY_COLOR;
-@(218, 232, 241)/255.0 => vec3 MOON_COLOR;
-@(2, 48, 32)/255.0 => vec3 FOREST_COLOR;
-@(4, 26, 24)/255.0 * 0.5 => vec3 SPECTRUM_COLOR;
+@(255, 230, 109) / 255.0 => vec3 FIREFLY_COLOR;
+@(218, 232, 241) / 255.0 => vec3 MOON_COLOR;
+@(2, 48, 32) / 255.0 => vec3 FOREST_COLOR;
+@(4, 26, 24) / 255.0 * 0.5 => vec3 SPECTRUM_COLOR;
 // bloom intensity
 0.9 => float BLOOM_INTENSITY;
 // firefly color intensity
@@ -35,18 +35,18 @@
 40 => float DISPLAY_WIDTH;
 
 // window title
-GWindow.title( "firefly" );
+GWindow.title("firefly");
 // uncomment to fullscreen
 // GWindow.fullscreen();
 
 GOrbitCamera cam --> GG.scene();
 cam.posZ(8.0);
-cam.lookAt(@(0,0,0));
+cam.lookAt(@(0, 0, 0));
 GG.scene().camera(cam);
 
 // firefly
 // TODO: tweak params
-SphereGeometry sphere_geo(0.05, 32, 16, 0., 2*Math.pi, 0., Math.pi);
+SphereGeometry sphere_geo(0.05, 32, 16, 0., 2 * Math.pi, 0., Math.pi);
 FlatMaterial mat;
 mat.color(FIREFLY_COLOR * INTENSITY);
 GMesh firefly(sphere_geo, mat) --> GG.scene();
@@ -54,10 +54,11 @@ GMesh firefly(sphere_geo, mat) --> GG.scene();
 
 // waveform renderer
 GLines waveform --> GG.scene();
-waveform.rotZ(- Math.pi / 2);
+waveform.rotZ(-Math.pi / 2);
 // waveform.rotX(1);
 waveform.rotY(WAVEFORM_ROT_Y);
-waveform.translate(@(0, -WAVEFORM_WIDTH/2 * Math.cos(WAVEFORM_ROT_Y) + FIREFLY_Y, -WAVEFORM_WIDTH/2 * Math.sin(WAVEFORM_ROT_Y)));
+waveform.translate(@(0, -WAVEFORM_WIDTH / 2 * Math.cos(WAVEFORM_ROT_Y) + FIREFLY_Y,
+                     -WAVEFORM_WIDTH / 2 * Math.sin(WAVEFORM_ROT_Y)));
 // waveform.posZ()
 // waveform.posY(FIREFLY_Y - WAVEFORM_WIDTH / 2);
 waveform.width(.04);
@@ -65,19 +66,17 @@ waveform.color(FIREFLY_COLOR);
 
 // many fireflies out there
 300 => int FIREFLY_NUM;
-SphereGeometry sphere_geo_many(0.02, 32, 16, 0., 2*Math.pi, 0., Math.pi);
+SphereGeometry sphere_geo_many(0.02, 32, 16, 0., 2 * Math.pi, 0., Math.pi);
 FlatMaterial mat_many[FIREFLY_NUM];
-float init_time[FIREFLY_NUM];  // the initial time offset for each firefly
-float fade_freq[FIREFLY_NUM];  // fade in/out frequency of each firefly
-float intensities[FIREFLY_NUM];  // randomized brightness of each firefly
+float init_time[FIREFLY_NUM];   // the initial time offset for each firefly
+float fade_freq[FIREFLY_NUM];   // fade in/out frequency of each firefly
+float intensities[FIREFLY_NUM]; // randomized brightness of each firefly
 for (int i; i < FIREFLY_NUM; i++) {
     Math.random2f(0.1, 3.) => fade_freq[i];
     Math.random2f(0., 2.) => init_time[i];
     Math.random2f(0.1, 0.5) => intensities[i];
 }
-for (auto x: mat_many) {
-    x.color(FIREFLY_COLOR * Math.random2f(0., 0.3));
-}
+for (auto x : mat_many) { x.color(FIREFLY_COLOR * Math.random2f(0., 0.3)); }
 
 GMesh fireflies[FIREFLY_NUM];
 -10 => float minX => float minY;
@@ -101,19 +100,19 @@ for (int i; i < FIREFLY_NUM; i++) {
 
 // landscape
 GPlane landscape --> GG.scene();
-@(2,2,2) => landscape.color;
+@(2, 2, 2) => landscape.color;
 50 => float SCALE;
 SCALE => landscape.sca;
-16./9. * SCALE => landscape.scaX;
+16. / 9. * SCALE => landscape.scaX;
 Math.pi => landscape.rotX;
 @(0, 0, -50) => landscape.translate;
 
-Texture.load(me.dir() + "./imgs/twilight.jpg" ) @=> Texture tex;
+Texture.load(me.dir() + "./imgs/twilight.jpg") @=> Texture tex;
 landscape.colorMap(tex);
 
 // ground
 GPlane ground --> GG.scene();
-@(0,0,0) => ground.color;
+@(0, 0, 0) => ground.color;
 500 => ground.sca;
 Math.pi / 2 => ground.rotX;
 @(0, -8, 0) => ground.translate;
@@ -137,12 +136,12 @@ output_pass.input(bloom_pass.colorOutput());
 // make a waterfall
 Waterfall waterfall --> GG.scene();
 // translate down
-waterfall.posY( SPECTRUM_Y );
+waterfall.posY(SPECTRUM_Y);
 
 // which input?
 // adc => Gain input;
 SndBuf buf(me.dir() + "data/Elijo.wav") => Gain input => dac;
-if( !buf.ready() ) me.exit();
+if (!buf.ready()) me.exit();
 0.1 => buf.gain;
 
 // SinOsc sine => Gain input => dac; .15 => sine.gain;
@@ -162,9 +161,9 @@ WINDOW_SIZE => accum.size;
 // set window type and size
 Windowing.hann(WINDOW_SIZE) => fft.window;
 // set FFT size (will automatically zero pad)
-WINDOW_SIZE*2 => fft.size;
+WINDOW_SIZE * 2 => fft.size;
 // get a reference for our window for visual tapering of the waveform
-Windowing.hann(WINDOW_SIZE*2) @=> float window[];
+Windowing.hann(WINDOW_SIZE * 2) @=> float window[];
 
 // sample array
 float samples[WINDOW_SIZE];
@@ -174,27 +173,24 @@ complex response[0];
 vec2 positions[WINDOW_SIZE];
 
 // custom GGen to render waterfall
-class Waterfall extends GGen
-{
+class Waterfall extends GGen {
     // waterfall playhead
     0 => int playhead;
     // lines
     GLines wfl[WATERFALL_DEPTH];
 
     // iterate over line GGens
-    for( GLines w : wfl )
-    {
+    for (GLines w : wfl) {
         // aww yea, connect as a child of this GGen
         w --> this;
         // line width
         w.width(0.2);
         // color
-        w.color( SPECTRUM_COLOR );
+        w.color(SPECTRUM_COLOR);
     }
 
     // copy
-    fun void latest( vec2 positions[] )
-    {
+    fun void latest(vec2 positions[]) {
         // set into
         positions => wfl[playhead].positions;
         // advance playhead
@@ -204,27 +200,25 @@ class Waterfall extends GGen
     }
 
     // update
-    fun void update( float dt )
-    {
+    fun void update(float dt) {
         // position
         playhead => int pos;
         // so good
-        for( int i; i < wfl.size(); i++ )
-        {
+        for (int i; i < wfl.size(); i++) {
             // start with playhead-1 and go backwards
-            pos++; if( pos >= WATERFALL_DEPTH ) 0 => pos;
+            pos++;
+            if (pos >= WATERFALL_DEPTH) 0 => pos;
             // offset Z
-            wfl[pos].posZ( -i + 5 );
+            wfl[pos].posZ(-i + 5);
             // wfl[pos].posY(i * 0.05 - 3);
             // set fade
-            wfl[pos].color( SPECTRUM_COLOR * Math.pow(1.0 - (i$float / WATERFALL_DEPTH), 8) );
+            wfl[pos].color(SPECTRUM_COLOR * Math.pow(1.0 - (i$float / WATERFALL_DEPTH), 8));
         }
     }
 }
 
 // keyboard controls and getting audio from dac
-fun void kbListener()
-{
+fun void kbListener() {
     SndBuf buf => input;
     .0 => buf.gain;
     "special:dope" => buf.read;
@@ -236,16 +230,14 @@ fun void kbListener()
         }
     }
 }
-spork ~ kbListener();
+spork ~kbListener();
 
 float magwf[WINDOW_SIZE];
 float pre_magwf[WINDOW_SIZE];
 // map audio buffer to 3D positions
-fun void map2waveform( float in[], vec2 out[] )
-{
-    if( in.size() != out.size() )
-    {
-        <<< "size mismatch in map2waveform()", "" >>>;
+fun void map2waveform(float in[], vec2 out[]) {
+    if (in.size() != out.size()) {
+        <<<"size mismatch in map2waveform()", "">>>;
         return;
     }
 
@@ -253,11 +245,10 @@ fun void map2waveform( float in[], vec2 out[] )
     WAVEFORM_WIDTH => float width;
     0.05 => float neg_flex;
     0.2 => float pos_flex;
-    for( 0 => int i; i < in.size(); i++ )
-    {
+    for (0 => int i; i < in.size(); i++) {
         // space evenly in X
-        -width/2 + width/WINDOW_SIZE*i => out[i].x;
-        in[i] * 10 * window[i+20] => magwf[i];
+        -width / 2 + width / WINDOW_SIZE * i => out[i].x;
+        in[i] * 10 * window[i + 20] => magwf[i];
         // interpolation
         if (Math.fabs(pre_magwf[i]) > Math.fabs(magwf[i]))
             pre_magwf[i] + (magwf[i] - pre_magwf[i]) * neg_flex => magwf[i];
@@ -272,11 +263,9 @@ fun void map2waveform( float in[], vec2 out[] )
 float magspec[WINDOW_SIZE];
 float pre_magspec[WINDOW_SIZE];
 // map FFT output to 3D positions
-fun void map2spectrum( complex in[], vec2 out[] )
-{
-    if( in.size() != out.size() )
-    {
-        <<< "size mismatch in map2spectrum()", "" >>>;
+fun void map2spectrum(complex in[], vec2 out[]) {
+    if (in.size() != out.size()) {
+        <<<"size mismatch in map2spectrum()", "">>>;
         return;
     }
 
@@ -284,12 +273,11 @@ fun void map2spectrum( complex in[], vec2 out[] )
     DISPLAY_WIDTH => float width;
     0.02 => float neg_flex;
     0.06 => float pos_flex;
-    for( 0 => int i; i < in.size(); i++ )
-    {
+    for (0 => int i; i < in.size(); i++) {
         // space logarithmically in X
-        -width/2 + width * Math.log(i + 1) / Math.log(WINDOW_SIZE) => out[i].x;
+        -width / 2 + width * Math.log(i + 1) / Math.log(WINDOW_SIZE) => out[i].x;
         // map frequency bin magnitide in Y
-        50 * Math.sqrt( (in[i]$polar).mag) => magspec[i];
+        50 * Math.sqrt((in[i] $polar).mag) => magspec[i];
         // interpolation
         if (pre_magspec[i] > magspec[i])
             pre_magspec[i] + (magspec[i] - pre_magspec[i]) * neg_flex => magspec[i];
@@ -300,33 +288,29 @@ fun void map2spectrum( complex in[], vec2 out[] )
         magspec[i] => pre_magspec[i];
     }
 
-    waterfall.latest( out );
+    waterfall.latest(out);
 }
 
 // do audio stuff
-fun void doAudio()
-{
-    while( true )
-    {
+fun void doAudio() {
+    while (true) {
         // upchuck to process accum
         accum.upchuck();
         // get the last window size samples (waveform)
-        accum.output( samples );
+        accum.output(samples);
         // upchuck to take FFT, get magnitude reposne
         fft.upchuck();
         // get spectrum (as complex values)
-        fft.spectrum( response );
+        fft.spectrum(response);
         // jump by samples
-        WINDOW_SIZE::samp/2 => now;
+        WINDOW_SIZE::samp / 2 => now;
     }
 }
-spork ~ doAudio();
+spork ~doAudio();
 
-fun void controlSine( Osc s )
-{
-    while( true )
-    {
-        100 + (Math.sin(now/second*1)+1)/2*20000 => s.freq;
+fun void controlSine(Osc s) {
+    while (true) {
+        100 + (Math.sin(now / second * 1) + 1) / 2 * 20000 => s.freq;
         10::ms => now;
     }
 }
@@ -369,7 +353,7 @@ fun void brightness_change() {
         curr => prev;
     }
 }
-spork ~ brightness_change();
+spork ~brightness_change();
 
 fun void fade_in_out() {
     // fireflies: fade in/out randomly
@@ -382,7 +366,7 @@ fun void fade_in_out() {
         }
     }
 }
-spork ~ fade_in_out();
+spork ~fade_in_out();
 
 float vx[FIREFLY_NUM];
 float vy[FIREFLY_NUM];
@@ -411,19 +395,15 @@ fun void drifting() {
             // if (pos.z < minZ + edge_buf || pos.z > maxZ - edge_buf)
             //     0.9 *=> vz[i];
             // soft center
-            if (Math.fabs(pos.x) < edge_buf || Math.fabs(pos.x) - 5 < edge_buf || Math.fabs(pos.x) + 5 < edge_buf)
+            if (Math.fabs(pos.x) < edge_buf || Math.fabs(pos.x) - 5 < edge_buf ||
+                Math.fabs(pos.x) + 5 < edge_buf)
                 0.99 *=> vx[i];
-            if (Math.fabs(pos.y) < edge_buf)
-                0.99 *=> vy[i];
-            if (Math.fabs(pos.z) < edge_buf * 5)
-                0.99 *=> vz[i];
+            if (Math.fabs(pos.y) < edge_buf) 0.99 *=> vy[i];
+            if (Math.fabs(pos.z) < edge_buf * 5) 0.99 *=> vz[i];
             // boundary reflection
-            if (pos.x < minX || pos.x > maxX)
-                -0.99 *=> vx[i];
-            if (pos.y < minY || pos.y > maxY)
-                -0.99 *=> vy[i];
-            if (pos.z < minZ || pos.z > maxZ)
-                -0.99 *=> vz[i];
+            if (pos.x < minX || pos.x > maxX) -0.99 *=> vx[i];
+            if (pos.y < minY || pos.y > maxY) -0.99 *=> vy[i];
+            if (pos.z < minZ || pos.z > maxZ) -0.99 *=> vz[i];
             // wrapping
             // if (pos.x < minX)
             //     maxX => pos.x;
@@ -442,7 +422,7 @@ fun void drifting() {
         }
     }
 }
-spork ~ drifting();
+spork ~drifting();
 
 fun void rotate_waveform() {
     // rotate waveform at X axis
@@ -454,14 +434,13 @@ fun void rotate_waveform() {
 // spork ~ rotate_waveform();
 
 // graphics render loop
-while( true )
-{
+while (true) {
     // map to interleaved format
-    map2waveform( samples, positions );
+    map2waveform(samples, positions);
     // set the mesh position
-    waveform.positions( positions );
+    waveform.positions(positions);
     // map to spectrum display
-    map2spectrum( response, positions );
+    map2spectrum(response, positions);
 
     // next graphics frame
     GG.nextFrame() => now;
@@ -471,6 +450,4 @@ while( true )
     //     UI.scenegraph(GG.scene());
     // }
     // UI.end(); // end of UI window, must match UI.begin(...)
-
 }
-
