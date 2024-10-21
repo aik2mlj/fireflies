@@ -403,7 +403,7 @@ fun void drifting() {
             // boundary reflection
             if (pos.x < minX || pos.x > maxX) -0.99 *=> vx[i];
             if (pos.y < minY || pos.y > maxY) -0.99 *=> vy[i];
-            if (pos.z < minZ || pos.z > maxZ) -0.99 *=> vz[i];
+            // if (pos.z < minZ || pos.z > maxZ) -0.99 *=> vz[i];
             // wrapping
             // if (pos.x < minX)
             //     maxX => pos.x;
@@ -413,12 +413,12 @@ fun void drifting() {
             //     maxY => pos.y;
             // else if (pos.y > maxY)
             //     minY => pos.y;
-            // if (pos.z < minZ)
-            //     maxZ => pos.z;
-            // else if (pos.z > maxZ)
-            //     minZ => pos.z;
+            if (pos.z < minZ) maxZ => pos.z;
+            else if (pos.z > maxZ) minZ => pos.z;
 
-            @(vx[i] * speed + pos.x, vy[i] * speed + pos.y, vz[i] * speed + pos.z) => fireflies[i].pos;
+            // update the postions
+            // the fireflies are flying towards you, thus +GG.dt() for z axis
+            @(vx[i] * speed + pos.x, vy[i] * speed + pos.y, vz[i] * speed + pos.z + GG.dt()) => fireflies[i].pos;
         }
     }
 }
