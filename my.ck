@@ -171,6 +171,7 @@ float samples[WINDOW_SIZE];
 complex response[0];
 // a vector to hold positions
 vec2 positions[WINDOW_SIZE];
+vec2 positions_drifted[WINDOW_SIZE];
 
 // custom GGen to render waterfall
 class Waterfall extends GGen {
@@ -184,7 +185,7 @@ class Waterfall extends GGen {
         // aww yea, connect as a child of this GGen
         w --> this;
         // line width
-        w.width(0.3);
+        w.width(0.05);
         // color
         w.color(SPECTRUM_COLOR);
     }
@@ -421,6 +422,26 @@ fun void drifting() {
 }
 spork ~drifting();
 
+float main_vx, main_vy;
+fun void main_drifting() {
+    0.0003 => float acc_range;
+    // the drifting of the main firefly
+    Math.random2f(-acc_range, acc_range) +=> main_vx;
+    Math.random2f(-acc_range, acc_range) +=> main_vy;
+
+    firefly.pos() => vec3 pos;
+    if (Math.fabs(pos.x) < 0.5) 0.9 *=> main_vx;
+
+    @(main_vx + pos.x, pos.y, pos.z) => firefly.pos;
+}
+
+fun void waveform_drifting(vec3 pos, float v, vec2 in[], vec2 out[]) {
+    for (int i; i < in.size(); i++) {
+        in[i].x => out[i].x;
+        in[i].y + pos.x * Math.pow(1. - i$float / in.size(), 0.5) => out[i].y;
+    }
+}
+
 fun void move_landscape() {
     while (true) {
         GG.nextFrame() => now;
@@ -429,21 +450,25 @@ fun void move_landscape() {
 }
 spork ~move_landscape();
 
-fun void rotate_waveform() {
-    // rotate waveform at X axis
-    while (true) {
-        GG.nextFrame() => now;
-        5 * Math.random2f(-1, 1) * GG.dt() => waveform.rotateX;
-    }
-}
+// fun void rotate_waveform() {
+//     // rotate waveform at X axis
+//     while (true) {
+//         GG.nextFrame() => now;
+//         5 * Math.random2f(-1, 1) * GG.dt() => waveform.rotateX;
+//     }
+// }
 // spork ~ rotate_waveform();
 
 // graphics render loop
 while (true) {
     // map to interleaved format
     map2waveform(samples, positions);
+    // main drifting
+    main_drifting();
+    // change waveform position according to the position of the main firefly
+    waveform_drifting(firefly.pos(), main_vx, positions, positions_drifted);
     // set the mesh position
-    waveform.positions(positions);
+    waveform.positions(positions_drifted);
     // map to spectrum display
     map2spectrum(response, positions);
 
