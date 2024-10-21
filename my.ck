@@ -11,11 +11,11 @@
 // y position of spectrum
 -7 => float SPECTRUM_Y;
 // y offset of firefly and waveform
--1 => float FIREFLY_Y;
+-1.3 => float FIREFLY_Y;
 // width of waveform and spectrum display
 5 => float WAVEFORM_WIDTH;
 // waveform rotation angle along Y
--1.5 => float WAVEFORM_ROT_Y;
+-1.52 => float WAVEFORM_ROT_Y;
 // waterfall depth
 200 => int WATERFALL_DEPTH;
 // interpolation constant
@@ -150,6 +150,7 @@ buf_l => dac.left;
 buf_r => dac.right;
 
 buf_l => Gain input;
+0.3 => input.gain;
 
 // SinOsc sine => Gain input => dac; .15 => sine.gain;
 // estimate loudness
@@ -285,7 +286,7 @@ fun void map2spectrum(complex in[], vec2 out[]) {
         // space logarithmically in X
         -width / 2 + width * Math.log(i + 1) / Math.log(WINDOW_SIZE) => out[i].x;
         // map frequency bin magnitide in Y
-        50 * Math.sqrt((in[i] $polar).mag) => magspec[i];
+        80 * Math.sqrt((in[i] $polar).mag) => magspec[i];
         // interpolation
         if (pre_magspec[i] > magspec[i])
             pre_magspec[i] + (magspec[i] - pre_magspec[i]) * neg_flex => magspec[i];
@@ -383,8 +384,14 @@ fun void drifting() {
     // fireflies drifting randomly with velocity randomization
     0.001 => float acc_range;
     2 => float edge_buf;
+    1 => float vz_mag;  // the magifier of firefies' velocity at z axis
     while (true) {
         GG.nextFrame() => now;
+        if (UI.isKeyPressed(UI_Key.W)) {
+            0.1 +=> vz_mag;
+        } else if (UI.isKeyPressed(UI_Key.S)) {
+            0.1 -=> vz_mag;
+        }
         for (int i; i < FIREFLY_NUM; i++) {
             Math.random2f(-acc_range, acc_range) +=> vx[i];
             Math.random2f(-acc_range, acc_range) +=> vy[i];
@@ -423,39 +430,47 @@ fun void drifting() {
 
             // update the postions
             // the fireflies are flying towards you, thus +GG.dt() for z axis
-            @(vx[i] + pos.x, vy[i] + pos.y, vz[i] + pos.z + GG.dt()) => fireflies[i].pos;
+            @(vx[i] + pos.x, vy[i] + pos.y, vz[i] + pos.z + GG.dt() * vz_mag) => fireflies[i].pos;
         }
     }
 }
 spork ~drifting();
 
-float main_vx, main_vy;
-fun void main_drifting() {
-    0.0003 => float acc_range;
+float main_vx;
+0.001 => float acc_range;
+0.001 => float acc_ctrl;
+fun void main_drifting_control() {
     // the drifting of the main firefly
     Math.random2f(-acc_range, acc_range) +=> main_vx;
-    Math.random2f(-acc_range, acc_range) +=> main_vy;
 
     firefly.pos() => vec3 pos;
     if (Math.fabs(pos.x) < 0.5) 0.9 *=> main_vx;
 
-    @(main_vx + pos.x, pos.y, pos.z) => firefly.pos;
+    if (UI.isKeyPressed(UI_Key.D)) {
+        acc_ctrl +=> main_vx;
+    } else if (UI.isKeyPressed(UI_Key.A)) {
+        acc_ctrl -=> main_vx;
+    }
+
+    main_vx => firefly.translateX;
+    // also move the landscape!
+    -main_vx => landscape.translateX;
 }
 
 fun void waveform_drifting(vec3 pos, float v, vec2 in[], vec2 out[]) {
     for (int i; i < in.size(); i++) {
         in[i].x => out[i].x;
-        in[i].y + pos.x * Math.pow(1. - i$float / in.size(), 0.5) => out[i].y;
+        in[i].y + pos.x * Math.pow(1. - i$float / in.size(), 1.5) => out[i].y;
     }
 }
 
-fun void move_landscape() {
-    while (true) {
-        GG.nextFrame() => now;
-        GG.dt() * 0.1 => landscape.translateZ;
-    }
-}
-spork ~move_landscape();
+// fun void move_landscape() {
+//     while (true) {
+//         GG.nextFrame() => now;
+//         GG.dt() * 0.05 => landscape.translateZ;
+//     }
+// }
+// spork ~move_landscape();
 
 // fun void rotate_waveform() {
 //     // rotate waveform at X axis
@@ -470,8 +485,8 @@ spork ~move_landscape();
 while (true) {
     // map to interleaved format
     map2waveform(samples, positions);
-    // main drifting
-    main_drifting();
+    // main drifting & control
+    main_drifting_control();
     // change waveform position according to the position of the main firefly
     waveform_drifting(firefly.pos(), main_vx, positions, positions_drifted);
     // set the mesh position
