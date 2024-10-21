@@ -9,7 +9,7 @@
 // window size
 256 => int WINDOW_SIZE;
 // y position of spectrum
--3.5 => float SPECTRUM_Y;
+-7 => float SPECTRUM_Y;
 // y offset of firefly and waveform
 -1 => float FIREFLY_Y;
 // width of waveform and spectrum display
@@ -17,14 +17,14 @@
 // waveform rotation angle along Y
 -1.5 => float WAVEFORM_ROT_Y;
 // waterfall depth
-64 => int WATERFALL_DEPTH;
+200 => int WATERFALL_DEPTH;
 // interpolation constant
 0.5 => float FLEX;
 // colors
 @(255, 230, 109) / 255.0 => vec3 FIREFLY_COLOR;
 @(218, 232, 241) / 255.0 => vec3 MOON_COLOR;
 @(2, 48, 32) / 255.0 => vec3 FOREST_COLOR;
-@(4, 26, 24) / 255.0 * 0.5 => vec3 SPECTRUM_COLOR;
+@(20, 26, 24) / 255.0 * 0.5 => vec3 SPECTRUM_COLOR;
 // bloom intensity
 0.9 => float BLOOM_INTENSITY;
 // firefly color intensity
@@ -32,7 +32,7 @@
 // POW CRISP
 0.5 => float CRISP;
 // waterfall
-40 => float DISPLAY_WIDTH;
+100 => float DISPLAY_WIDTH;
 
 // window title
 GWindow.title("firefly");
@@ -100,7 +100,7 @@ for (int i; i < FIREFLY_NUM; i++) {
 
 // landscape
 GPlane landscape --> GG.scene();
-@(2, 2, 2) => landscape.color;
+@(3, 3, 3) => landscape.color;
 50 => float SCALE;
 SCALE => landscape.sca;
 16. / 9. * SCALE => landscape.scaX;
@@ -112,10 +112,11 @@ landscape.colorMap(tex);
 
 // ground
 GPlane ground --> GG.scene();
-@(0, 0, 0) => ground.color;
-500 => ground.sca;
+// @(0, 0, 0) => ground.color;
+SPECTRUM_COLOR * 5 => ground.color;
+100 => ground.sca;
 Math.pi / 2 => ground.rotX;
-@(0, -8, 0) => ground.translate;
+@(0, SPECTRUM_Y, 0) => ground.translate;
 
 // tree obj
 // AssLoader ass_loader;
@@ -184,7 +185,7 @@ class Waterfall extends GGen {
         // aww yea, connect as a child of this GGen
         w --> this;
         // line width
-        w.width(0.2);
+        w.width(0.3);
         // color
         w.color(SPECTRUM_COLOR);
     }
@@ -209,7 +210,7 @@ class Waterfall extends GGen {
             pos++;
             if (pos >= WATERFALL_DEPTH) 0 => pos;
             // offset Z
-            wfl[pos].posZ(-i + 5);
+            wfl[pos].posZ(-i * 0.25);
             // wfl[pos].posY(i * 0.05 - 3);
             // set fade
             wfl[pos].color(SPECTRUM_COLOR * Math.pow(1.0 - (i$float / WATERFALL_DEPTH), 8));
@@ -427,7 +428,7 @@ spork ~drifting();
 fun void move_landscape() {
     while (true) {
         GG.nextFrame() => now;
-        GG.dt() * 0.01 => landscape.translateZ;
+        GG.dt() * 0.1 => landscape.translateZ;
     }
 }
 spork ~move_landscape();
