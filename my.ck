@@ -385,13 +385,22 @@ fun void drifting() {
     0.001 => float acc_range;
     2 => float edge_buf;
     1 => float vz_mag;  // the magifier of firefies' velocity at z axis
+    0 => float vx_mag;  // the magifier of firefies' velocity at x axis
     while (true) {
         GG.nextFrame() => now;
+
         if (UI.isKeyPressed(UI_Key.W)) {
             0.1 +=> vz_mag;
         } else if (UI.isKeyPressed(UI_Key.S)) {
             0.1 -=> vz_mag;
         }
+
+        if (UI.isKeyPressed(UI_Key.A)) {
+            0.01 +=> vx_mag;
+        } else if (UI.isKeyPressed(UI_Key.D)) {
+            0.01 -=> vx_mag;
+        }
+
         for (int i; i < FIREFLY_NUM; i++) {
             Math.random2f(-acc_range, acc_range) +=> vx[i];
             Math.random2f(-acc_range, acc_range) +=> vy[i];
@@ -417,10 +426,8 @@ fun void drifting() {
             if (pos.y < minY || pos.y > maxY) -0.99 *=> vy[i];
             // if (pos.z < minZ || pos.z > maxZ) -0.99 *=> vz[i];
             // wrapping
-            // if (pos.x < minX)
-            //     maxX => pos.x;
-            // else if (pos.x > maxX)
-            //     minX => pos.x;
+            if (pos.x < minX) maxX => pos.x;
+            else if (pos.x > maxX) minX => pos.x;
             // if (pos.y < minY)
             //     maxY => pos.y;
             // else if (pos.y > maxY)
@@ -430,7 +437,7 @@ fun void drifting() {
 
             // update the postions
             // the fireflies are flying towards you, thus +GG.dt() for z axis
-            @(vx[i] + pos.x, vy[i] + pos.y, vz[i] + pos.z + GG.dt() * vz_mag) => fireflies[i].pos;
+            @(vx[i] + GG.dt() * vx_mag + pos.x, vy[i] + pos.y, vz[i] + GG.dt() * vz_mag + pos.z) => fireflies[i].pos;
         }
     }
 }
