@@ -424,6 +424,14 @@ fun void drifting() {
 }
 spork ~drifting();
 
+fun void move_landscape() {
+    while (true) {
+        GG.nextFrame() => now;
+        GG.dt() * 0.01 => landscape.translateZ;
+    }
+}
+spork ~move_landscape();
+
 fun void rotate_waveform() {
     // rotate waveform at X axis
     while (true) {
