@@ -71,9 +71,11 @@ SphereGeometry sphere_geo_many(0.02, 32, 16, 0., 2*Math.pi, 0., Math.pi);
 FlatMaterial mat_many[FIREFLY_NUM];
 float init_time[FIREFLY_NUM];  // the initial time offset for each firefly
 float fade_freq[FIREFLY_NUM];  // fade in/out frequency of each firefly
+float intensities[FIREFLY_NUM];  // randomized brightness of each firefly
 for (int i; i < FIREFLY_NUM; i++) {
     Math.random2f(0.1, 3.) => fade_freq[i];
     Math.random2f(0., 2.) => init_time[i];
+    Math.random2f(0.1, 0.5) => intensities[i];
 }
 for (auto x: mat_many) {
     x.color(FIREFLY_COLOR * Math.random2f(0., 0.3));
@@ -378,7 +380,7 @@ fun void fade_in_out() {
         GG.nextFrame() => now;
         (now - init_t) / 1::second => float t;
         for (int i; i < FIREFLY_NUM; i++) {
-            FIREFLY_COLOR * 0.3 * Math.fabs(Math.sin(fade_freq[i] * t + init_time[i])) => mat_many[i].color;
+            FIREFLY_COLOR * intensities[i] * Math.fabs(Math.sin(fade_freq[i] * t + init_time[i])) => mat_many[i].color;
         }
     }
 }
