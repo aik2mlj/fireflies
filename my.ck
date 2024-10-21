@@ -140,9 +140,16 @@ waterfall.posY(SPECTRUM_Y);
 
 // which input?
 // adc => Gain input;
-SndBuf buf(me.dir() + "data/Elijo.wav") => Gain input => dac;
-if (!buf.ready()) me.exit();
-0.1 => buf.gain;
+SndBuf buf_l(me.dir() + "data/Elijo.wav");
+SndBuf buf_r(me.dir() + "data/Elijo.wav");
+0 => buf_l.channel;
+1 => buf_r.channel;
+0.5 => buf_l.gain;
+0.5 => buf_r.gain;
+buf_l => dac.left;
+buf_r => dac.right;
+
+buf_l => Gain input;
 
 // SinOsc sine => Gain input => dac; .15 => sine.gain;
 // estimate loudness
