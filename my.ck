@@ -23,7 +23,6 @@
 // colors
 @(255, 230, 109) / 255.0 => vec3 FIREFLY_COLOR;
 @(218, 232, 241) / 255.0 => vec3 MOON_COLOR;
-@(2, 48, 32) / 255.0 => vec3 FOREST_COLOR;
 @(20, 26, 24) / 255.0 * 0.5 => vec3 SPECTRUM_COLOR;
 // bloom intensity
 0.9 => float BLOOM_INTENSITY;
@@ -35,7 +34,7 @@
 100 => float DISPLAY_WIDTH;
 
 // window title
-GWindow.title("firefly");
+// GWindow.title("firefly");
 // uncomment to fullscreen
 // GWindow.fullscreen();
 
@@ -374,13 +373,10 @@ float vy[FIREFLY_NUM];
 float vz[FIREFLY_NUM];
 fun void drifting() {
     // fireflies drifting randomly with velocity randomization
-    0.01 => float acc_range;
-    0.1 => float speed;
+    0.001 => float acc_range;
     2 => float edge_buf;
-    now => time init_t;
     while (true) {
         GG.nextFrame() => now;
-        (now - init_t) / 1::second => float t;
         for (int i; i < FIREFLY_NUM; i++) {
             Math.random2f(-acc_range, acc_range) +=> vx[i];
             Math.random2f(-acc_range, acc_range) +=> vy[i];
@@ -419,7 +415,7 @@ fun void drifting() {
 
             // update the postions
             // the fireflies are flying towards you, thus +GG.dt() for z axis
-            @(vx[i] * speed + pos.x, vy[i] * speed + pos.y, vz[i] * speed + pos.z + GG.dt()) => fireflies[i].pos;
+            @(vx[i] + pos.x, vy[i] + pos.y, vz[i] + pos.z + GG.dt()) => fireflies[i].pos;
         }
     }
 }
