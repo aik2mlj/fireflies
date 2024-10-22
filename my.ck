@@ -148,8 +148,8 @@ hpf => Delay delay(30::ms) => Pan2 pr => dac;
 -1 => pl.pan;
 1 => pr.pan;
 // set up the audio chain
-1  => z.norm;
-0.3 => float Z_GAIN => z.gain;
+1 => z.norm;
+0.1 => float Z_GAIN => z.gain;
 600 => float Z_FREQ => z.freq;
 0.8 => float Z_RADIUS => z.radius;
 
@@ -182,7 +182,7 @@ spork ~wind();
 // buf_r => dac.right;
 //
 // buf_l => Gain input;
-z => Gain input;
+hpf => Gain input;
 0.3 => input.gain;
 
 // SinOsc sine => Gain input => dac; .15 => sine.gain;
@@ -483,8 +483,9 @@ fun void main_drifting_control() {
     // the drifting of the main firefly
     Math.random2f(-acc_range, acc_range) +=> main_vx;
 
-    firefly.pos() => vec3 pos;
-    if (Math.fabs(pos.x) < 0.5) 0.9 *=> main_vx;
+    -1 * landscape.pos() => vec3 pos;
+    if (Math.fabs(pos.x) > 1.5 && Math.fabs(pos.x) <= 2) 0.9 *=> main_vx;
+    if (Math.fabs(pos.x) > 2) -0.9 *=> main_vx;
 
     if (UI.isKeyPressed(UI_Key.D)) {
         acc_ctrl +=> main_vx;
@@ -492,7 +493,7 @@ fun void main_drifting_control() {
         acc_ctrl -=> main_vx;
     }
 
-    main_vx => firefly.translateX;
+    // main_vx => firefly.translateX;
     // also move the landscape!
     -main_vx => landscape.translateX;
 }
@@ -500,7 +501,7 @@ fun void main_drifting_control() {
 fun void waveform_drifting(vec3 pos, float v, vec2 in[], vec2 out[]) {
     for (int i; i < in.size(); i++) {
         in[i].x => out[i].x;
-        in[i].y + pos.x * Math.pow(1. - i$float / in.size(), 1.5) => out[i].y;
+        in[i].y - 20 * v * Math.pow(i$float / in.size(), 1.5) => out[i].y;
     }
 }
 
