@@ -100,11 +100,11 @@ for (int i; i < FIREFLY_NUM; i++) {
 // landscape
 GPlane landscape --> GG.scene();
 @(3, 3, 3) => landscape.color;
-50 => float SCALE;
+52 => float SCALE;
 SCALE => landscape.sca;
 16. / 9. * SCALE => landscape.scaX;
 Math.pi => landscape.rotX;
-@(0, 0, -50) => landscape.translate;
+@(0, 3, -50) => landscape.translate;
 
 Texture.load(me.dir() + "./imgs/twilight.jpg") @=> Texture tex;
 landscape.colorMap(tex);
@@ -138,10 +138,10 @@ Waterfall waterfall --> GG.scene();
 // translate down
 waterfall.posY(SPECTRUM_Y);
 
-// adc => Gain input;
 
 // WIND!!
 CNoise n("white") => TwoPole z => HPF hpf => Pan2 pl => dac; 
+0.3 => n.gain;
 300 => hpf.freq;
 0.8 => hpf.Q;
 hpf => Delay delay(30::ms) => Pan2 pr => dac;
@@ -149,7 +149,7 @@ hpf => Delay delay(30::ms) => Pan2 pr => dac;
 1 => pr.pan;
 // set up the audio chain
 1 => z.norm;
-0.1 => float Z_GAIN => z.gain;
+0.0 => float Z_GAIN => z.gain;
 600 => float Z_FREQ => z.freq;
 0.8 => float Z_RADIUS => z.radius;
 
@@ -164,7 +164,7 @@ fun void wind() {
         v_freq + z.freq() => z.freq;
         v_gain + z.gain() => z.gain;
         v_radius + z.radius() => z.radius;
-        if (z.gain() < 0.1 || z.gain() > 0.5) -0.9 *=> v_gain;
+        if (z.gain() < 0.0 || z.gain() > 0.3) -0.9 *=> v_gain;
         if (z.radius() < 0.5 || z.radius() > 0.9) -0.99 *=> v_radius;
         if (z.freq() < 500 || z.freq() > 800) -0.99 *=> v_freq;
         // Math.random2f(-0.3, 0.3) => p.pan;
@@ -183,7 +183,13 @@ spork ~wind();
 //
 // buf_l => Gain input;
 hpf => Gain input;
-0.3 => input.gain;
+
+adc => input;
+adc => LPF lpf => NRev adc_rev => dac;
+0.1 => adc_rev.mix;
+10000 => lpf.freq;
+
+0.2 => input.gain;
 
 // SinOsc sine => Gain input => dac; .15 => sine.gain;
 // estimate loudness
@@ -379,7 +385,7 @@ fun void brightness_change() {
         // change color of circle
         curr * FIREFLY_COLOR * INTENSITY * 20 => vec3 firefly_color;
         firefly_color => mat.color;
-        Math.map(Math.atan(curr), 0, 0.06, 0.3, 0.6) => bloom_pass.radius;
+        Math.map2(Math.atan(curr), 0, 0.06, 0.3, 0.6) => bloom_pass.radius;
 
         // change gradient color for trace (waveform)
         firefly_color * 2 => w_colors[0];
@@ -522,6 +528,55 @@ fun void waveform_drifting(vec3 pos, float v, vec2 in[], vec2 out[]) {
 // }
 // spork ~ rotate_waveform();
 
+fun void addVoice(dur offset, float midi, dur note_dur, dur loop_dur)
+{
+    NRev rev => input;
+    rev => Pan2 pan => dac;
+    .50 => rev.mix;
+
+    Mandolin mdl => Envelope env => rev;
+    Std.mtof(midi) => mdl.freq;
+    .2 => mdl.gain;
+    1::ms => env.duration;
+
+    offset => now;
+    int instr;
+    while (true) {
+        Math.random2f(-0.6, 0.6) => pan.pan;
+        mdl.noteOn(1);
+        env.keyOn();
+        note_dur/2 => now;
+        env.keyOff();
+        note_dur/2 => now;
+        mdl.noteOff(1);
+        (loop_dur - note_dur) => now;
+    }
+}
+
+spork ~ addVoice(15::second + 0.0::second, 58+12, 7.7::second, 20.1::second); // C
+spork ~ addVoice(15::second + 1.9::second, 60+12, 7.1::second, 16.2::second); // Eb
+spork ~ addVoice(15::second + 6.5::second, 65+12, 8.5::second, 19.6::second); // F
+spork ~ addVoice(15::second + 6.7::second, 53+12, 9.1::second, 24.7::second); // low F
+spork ~ addVoice(15::second + 8.2::second, 68+12, 9.4::second, 17.8::second); // Ab
+spork ~ addVoice(15::second + 9.6::second, 56+12, 7.9::second, 21.3::second); // low Ab
+spork ~ addVoice(15::second + 15.0::second, 61+12, 9.2::second, 31.8::second); // Db
+
+fun void initialization() {
+    @(0, 0, 0) => landscape.color;
+    @(0, 0, 0) => ground.color;
+    10::second => now;
+
+    10::second => dur duration;
+    now => time init_t;
+    while (now - init_t < duration) {
+        (now - init_t) / duration => float t;
+        @(4, 4, 4) * t => landscape.color;
+        SPECTRUM_COLOR * 7 * t => ground.color;
+        GG.nextFrame() => now;
+    }
+}
+spork ~initialization();
+
 // graphics render loop
 while (true) {
     // map to interleaved format
@@ -544,3 +599,4 @@ while (true) {
     // }
     // UI.end(); // end of UI window, must match UI.begin(...)
 }
+
