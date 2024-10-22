@@ -138,18 +138,51 @@ Waterfall waterfall --> GG.scene();
 // translate down
 waterfall.posY(SPECTRUM_Y);
 
-// which input?
 // adc => Gain input;
-SndBuf buf_l(me.dir() + "data/Elijo.wav");
-SndBuf buf_r(me.dir() + "data/Elijo.wav");
-0 => buf_l.channel;
-1 => buf_r.channel;
-0.5 => buf_l.gain;
-0.5 => buf_r.gain;
-buf_l => dac.left;
-buf_r => dac.right;
 
-buf_l => Gain input;
+// WIND!!
+CNoise n("white") => TwoPole z => HPF hpf => Pan2 pl => dac; 
+300 => hpf.freq;
+0.8 => hpf.Q;
+hpf => Delay delay(30::ms) => Pan2 pr => dac;
+-1 => pl.pan;
+1 => pr.pan;
+// set up the audio chain
+1  => z.norm;
+0.3 => float Z_GAIN => z.gain;
+600 => float Z_FREQ => z.freq;
+0.8 => float Z_RADIUS => z.radius;
+
+fun void wind() {
+    float v_freq;
+    float v_gain;
+    float v_radius;
+    while (true) {
+        0.0001 * Math.random2f(-1., 1.) +=> v_freq;
+        0.0003 * Math.random2f(-1., 1.) +=> v_gain;
+        0.0001 * Math.random2f(-1., 1.) +=> v_radius;
+        v_freq + z.freq() => z.freq;
+        v_gain + z.gain() => z.gain;
+        v_radius + z.radius() => z.radius;
+        if (z.gain() < 0.1 || z.gain() > 0.5) -0.9 *=> v_gain;
+        if (z.radius() < 0.5 || z.radius() > 0.9) -0.99 *=> v_radius;
+        if (z.freq() < 500 || z.freq() > 800) -0.99 *=> v_freq;
+        // Math.random2f(-0.3, 0.3) => p.pan;
+        100::ms => now;
+    }
+}
+spork ~wind();
+// SndBuf buf_l(me.dir() + "data/Elijo.wav");
+// SndBuf buf_r(me.dir() + "data/Elijo.wav");
+// 0 => buf_l.channel;
+// 1 => buf_r.channel;
+// 0.5 => buf_l.gain;
+// 0.5 => buf_r.gain;
+// buf_l => dac.left;
+// buf_r => dac.right;
+//
+// buf_l => Gain input;
+z => Gain input;
 0.3 => input.gain;
 
 // SinOsc sine => Gain input => dac; .15 => sine.gain;
