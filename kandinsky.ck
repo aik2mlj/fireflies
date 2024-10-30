@@ -16,6 +16,10 @@ GG.windowed(1600, 900);
 GG.camera() @=> GCamera @ cam;
 cam.orthographic();  // Orthographic camera mode for 2D scene
 
+// light
+GG.scene().light() @=> GLight light;
+// 0. => light.intensity;
+
 16.0 / 9.0 => float ASPECT;
 cam.viewSize() => float HEIGHT;
 cam.viewSize() * ASPECT => float WIDTH;
@@ -26,6 +30,9 @@ HEIGHT / 2 => float UP;
 0.4 => float TOOLBAR_SIZE;
 0.1 => float TOOLBAR_PADDING;
 
+// colors
+@(242., 169., 143.) / 255. * 3 => vec3 COLOR_ICONBG_ACTIVE;
+@(2, 2, 2) => vec3 COLOR_ICONBG_NONE;
 
 // white background
 GPlane background --> scene;
@@ -34,23 +41,26 @@ HEIGHT => background.scaY;
 -10 => background.posZ;
 @(1., 1., 1.) * 5 => background.color;
 
+DrawEvent drawEvent;
 LineDraw linedraw(mouse);
-// spork ~ linedraw.draw();
 CircleDraw circledraw(mouse);
+spork ~ select_drawtool(mouse, drawEvent);
 
 PlayLine playline --> scene;
 spork ~ playline.play();
 
 // simplified Mouse class from examples/input/Mouse.ck  =======================
 class Mouse {
-    vec3 worldPos;
+    vec2 pos;
 
     // update mouse world position
     fun void selfUpdate() {
         while (true) {
             GG.nextFrame() => now;
             // calculate mouse world X and Y coords
-            GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => worldPos;
+            GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => vec3 worldPos;
+            worldPos.x => this.pos.x;
+            worldPos.y => this.pos.y;
         }
     }
 }
@@ -76,7 +86,7 @@ class Circle extends GGen {
     fun Circle(vec2 center, float r, vec3 color) {
         center.x => g.posX;
         center.y => g.posY;
-        r => g.sca;
+        r * 2. => g.sca;
         color => g.color;
     }
 }
@@ -93,11 +103,39 @@ class Draw {
         m @=> this.mouse;
 
         TOOLBAR_SIZE => icon_bg.sca;
-        @(2, 2, 2) => icon_bg.color;
+        COLOR_ICONBG_NONE => icon_bg.color;
+    }
+
+    // returns true if mouse is hovering over icon_bg
+    fun int isHovered() {
+        icon_bg.scaWorld() => vec3 worldScale;  // get dimensions
+        worldScale.x / 2.0 => float halfWidth;
+        worldScale.y / 2.0 => float halfHeight;
+        icon_bg.posWorld() => vec3 pos;   // get position
+
+        if (this.mouse.pos.x > pos.x - halfWidth && this.mouse.pos.x < pos.x + halfWidth &&
+            this.mouse.pos.y > pos.y - halfHeight && this.mouse.pos.y < pos.y + halfHeight) {
+            return true;
+        }
+        return false;
+    }
+
+    fun void activate() {
+        // change icon_bg color
+        COLOR_ICONBG_ACTIVE => this.icon_bg.color;
+    }
+
+    fun void test_deactivate_exit_shred() {
+        // when stop drawing / switch to other drawtools, exit this shred
+        if (drawEvent.isNone() || drawEvent.isActive() && drawEvent.draw != this) {
+            // <<< "exit..." >>>;
+            COLOR_ICONBG_NONE => this.icon_bg.color;
+            me.exit();
+        }
     }
 
     // polymorphism placeholder
-    fun void draw() {
+    fun void draw(DrawEvent drawEvent) {
         return;
     }
 }
@@ -117,27 +155,27 @@ class LineDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun void draw() {
+    fun void draw(DrawEvent drawEvent) {
+        // <<< "LineDraw", me.id() >>>;
         vec2 start, end;
         0 => int state; // current state
+
+        this.activate();
+
         while (true) {
             GG.nextFrame() => now;
-            if (state == NONE) {
-                if (GWindow.mouseLeftDown()) {
-                    ACTIVE => state;
-                    this.mouse.worldPos.x => start.x;
-                    this.mouse.worldPos.y => start.y;
-                }
-            }
-            if (state == ACTIVE) {
-                if (GWindow.mouseLeftUp()) {
-                    NONE => state;
-                    this.mouse.worldPos.x => end.x;
-                    this.mouse.worldPos.y => end.y;
 
-                    // generate a new line
-                    Line line(start, end, Color.YELLOW, 0.1) --> GG.scene();
-                }
+            this.test_deactivate_exit_shred();
+
+            if (state == NONE && GWindow.mouseLeftDown()) {
+                ACTIVE => state;
+                this.mouse.pos => start;
+            } else if (state == ACTIVE && GWindow.mouseLeftUp()) {
+                NONE => state;
+                this.mouse.pos => end;
+
+                // generate a new line
+                Line line(start, end, Color.YELLOW, 0.1) --> GG.scene();
             }
         }
     }
@@ -158,8 +196,87 @@ class CircleDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun void draw() {
+    fun void draw(DrawEvent drawEvent) {
+        // <<< "CircleDraw", me.id() >>>;
+        vec2 center;
+        float radius;
+        0 => int state;
 
+        this.activate();
+
+        while (true) {
+            GG.nextFrame() => now;
+
+            this.test_deactivate_exit_shred();
+
+            if (state == NONE && GWindow.mouseLeftDown()) {
+                ACTIVE => state;
+                this.mouse.pos => center;
+            }
+            if (state == ACTIVE && GWindow.mouseLeftUp()) {
+                NONE => state;
+                (this.mouse.pos - center) => vec2 r;
+                Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
+
+                // generate a new line
+                Circle circle(center, radius, Color.RED) --> GG.scene();
+            }
+        }
+    }
+}
+
+class DrawEvent extends Event {
+    0 => static int NONE;  // no drawtool selected
+    1 => static int ACTIVE;  // drawtool selected
+    0 => int state;
+    Draw @ draw;  // reference to the selected drawtool
+
+    fun int isNone() {
+        return state == NONE;
+    }
+
+    fun int isActive() {
+        return state == ACTIVE;
+    }
+
+    fun void setNone() {
+        NONE => this.state;
+        null @=> draw;
+    }
+
+    fun void setActive(Draw @ d) {
+        ACTIVE => this.state;
+        d @=> draw;
+    }
+}
+
+fun void select_drawtool(Mouse @ m, DrawEvent drawEvent) {
+    // polymorphism
+    Draw @ draws[2];
+    new LineDraw(m) @=> draws[0];
+    new CircleDraw(m) @=> draws[1];
+    <<< me.id() >>>;
+
+    while (true) {
+        GG.nextFrame() => now;
+        for (auto draw : draws) {
+            if (GWindow.mouseLeftDown() && draw.isHovered()) {
+                // clicked on this drawtool
+                if (drawEvent.isNone() || drawEvent.isActive() && drawEvent.draw != draw) {
+                    // was inactive / switch activation
+                    <<< "activate" >>>;
+                    drawEvent.setActive(draw);
+                    drawEvent.broadcast();
+                    spork ~ draw.draw(drawEvent);
+                } else if (drawEvent.isActive() && drawEvent.draw == draw) {
+                    // deactivate
+                    <<< "deactivate" >>>;
+                    drawEvent.setNone();
+                    drawEvent.broadcast();
+                }
+                break;
+            }
+        }
     }
 }
 
