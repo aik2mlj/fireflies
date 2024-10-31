@@ -38,7 +38,7 @@ HEIGHT / 2 => float UP;
 GPlane background --> scene;
 WIDTH => background.scaX;
 HEIGHT => background.scaY;
--10 => background.posZ;
+-90 => background.posZ;
 @(1., 1., 1.) * 5 => background.color;
 
 DrawEvent drawEvent;
@@ -86,10 +86,11 @@ fun int isHoveredGGen(Mouse @ mouse, GGen @ g) {
 class Line extends GGen {
     GLines g --> this;
 
-    fun Line(vec2 start, vec2 end, vec3 color, float width) {
+    fun Line(vec2 start, vec2 end, vec3 color, float width, float depth) {
         width => g.width;
         color => g.color;
         g.positions([start, end]);
+        depth => this.posZ;
     }
 
     fun void updatePos(vec2 start, vec2 end) {
@@ -100,11 +101,12 @@ class Line extends GGen {
 class Circle extends GGen {
     GCircle g --> this;
 
-    fun Circle(vec2 center, float r, vec3 color) {
+    fun Circle(vec2 center, float r, vec3 color, float depth) {
         center.x => g.posX;
         center.y => g.posY;
         r * 2. => g.sca;
         color => g.color;
+        depth => this.posZ;
     }
 }
 
@@ -177,7 +179,7 @@ class Draw extends GGen {
         COLOR_ICONBG_ACTIVE => this.icon_bg.color;
     }
 
-    fun void test_deactivate_exit_shred() {
+    fun void test_deactivate_exit_shred(DrawEvent @ drawEvent) {
         // when stop drawing / switch to other drawtools, exit this shred
         if (drawEvent.isNone() || drawEvent.isActive() && drawEvent.draw != this) {
             // <<< "exit..." >>>;
@@ -217,17 +219,18 @@ class LineDraw extends Draw {
         while (true) {
             GG.nextFrame() => now;
 
-            this.test_deactivate_exit_shred();
+            this.test_deactivate_exit_shred(drawEvent);
 
             if (state == NONE && GWindow.mouseLeftDown()) {
                 ACTIVE => state;
+                drawEvent.incDepth();
                 this.mouse.pos => start;
             } else if (state == ACTIVE && GWindow.mouseLeftUp()) {
                 NONE => state;
                 this.mouse.pos => end;
 
                 // generate a new line
-                Line line(start, end, drawEvent.color, 0.1) --> GG.scene();
+                Line line(start, end, drawEvent.color, 0.1, drawEvent.depth) --> GG.scene();
             }
         }
     }
@@ -259,10 +262,11 @@ class CircleDraw extends Draw {
         while (true) {
             GG.nextFrame() => now;
 
-            this.test_deactivate_exit_shred();
+            this.test_deactivate_exit_shred(drawEvent);
 
             if (state == NONE && GWindow.mouseLeftDown()) {
                 ACTIVE => state;
+                drawEvent.incDepth();
                 this.mouse.pos => center;
             }
             if (state == ACTIVE && GWindow.mouseLeftUp()) {
@@ -271,7 +275,7 @@ class CircleDraw extends Draw {
                 Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
 
                 // generate a new line
-                Circle circle(center, radius, drawEvent.color) --> GG.scene();
+                Circle circle(center, radius, drawEvent.color, drawEvent.depth) --> GG.scene();
             }
         }
     }
@@ -282,7 +286,8 @@ class DrawEvent extends Event {
     1 => static int ACTIVE;  // drawtool selected
     0 => int state;
     Draw @ draw;  // reference to the selected drawtool
-    vec3 color;
+    vec3 color;  // selected color
+    -50 => float depth;  // current depth of the drawed object
 
     fun int isNone() {
         return state == NONE;
@@ -300,6 +305,10 @@ class DrawEvent extends Event {
     fun void setActive(Draw @ d) {
         ACTIVE => this.state;
         d @=> draw;
+    }
+
+    fun void incDepth() {
+        depth + 0.001 => depth;
     }
 }
 
