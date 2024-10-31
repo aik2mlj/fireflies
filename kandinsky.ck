@@ -18,7 +18,7 @@ cam.orthographic();  // Orthographic camera mode for 2D scene
 
 // light
 GG.scene().light() @=> GLight light;
-// 0. => light.intensity;
+0. => light.intensity;
 
 16.0 / 9.0 => float ASPECT;
 cam.viewSize() => float HEIGHT;
@@ -33,9 +33,10 @@ HEIGHT / 2 => float UP;
 // colors
 @(242., 169., 143.) / 255. * 3 => vec3 COLOR_ICONBG_ACTIVE;
 @(2, 2, 2) => vec3 COLOR_ICONBG_NONE;
+@(.2, .2, .2) => vec3 COLOR_ICON;
 
 // white background
-GPlane background --> scene;
+Plane background --> scene;
 WIDTH => background.scaX;
 HEIGHT => background.scaY;
 -90 => background.posZ;
@@ -83,6 +84,27 @@ fun int isHoveredGGen(Mouse @ mouse, GGen @ g) {
 }
 
 // Various object class for painting ==========================================
+
+class Plane extends GGen {
+    GPlane g --> this;
+    FlatMaterial mat;
+    g.mat(mat);
+
+    fun Plane(vec2 pos, float scale, vec3 color, float depth) {
+        @(pos.x, pos.y, depth) => g.pos;
+        scale => g.sca;
+        color => mat.color;
+    }
+
+    fun vec3 color() {
+        return mat.color();
+    }
+
+    fun void color(vec3 c) {
+        mat.color(c);
+    }
+}
+
 class Line extends GGen {
     GLines g --> this;
 
@@ -96,24 +118,42 @@ class Line extends GGen {
     fun void updatePos(vec2 start, vec2 end) {
         g.positions([start, end]);
     }
+
+    fun vec3 color() {
+        return g.color();
+    }
+
+    fun void color(vec3 c) {
+        g.color(c);
+    }
 }
 
 class Circle extends GGen {
     GCircle g --> this;
+    FlatMaterial mat;
+    g.mat(mat);
 
     fun Circle(vec2 center, float r, vec3 color, float depth) {
         center.x => g.posX;
         center.y => g.posY;
         r * 2. => g.sca;
-        color => g.color;
+        color => mat.color;
         depth => this.posZ;
+    }
+
+    fun vec3 color() {
+        return mat.color();
+    }
+
+    fun void color(vec3 c) {
+        mat.color(c);
     }
 }
 
 // Toolbar: Drawing tools and color picker =============================================
 class ColorPicker extends GGen {
     // color picker
-    GPlane g --> this;
+    Plane g --> this;
     [Color.SKYBLUE, Color.BEIGE, Color.MAGENTA, Color.LIGHTGRAY] @=> vec3 presets[];
     int idx;
 
@@ -161,7 +201,7 @@ class Draw extends GGen {
 
     Mouse @ mouse;
 
-    GPlane icon_bg --> this;
+    Plane icon_bg --> this;
 
     fun @construct(Mouse @ m) {
         m @=> this.mouse;
@@ -202,7 +242,7 @@ class LineDraw extends Draw {
         Draw(mouse);
 
         0.03 => icon.width;
-        @(.2, .2, .2) => icon.color;
+        COLOR_ICON => icon.color;
         [@(icon_offset-(TOOLBAR_SIZE-TOOLBAR_PADDING)/2, DOWN+TOOLBAR_PADDING),
             @(icon_offset+(TOOLBAR_SIZE-TOOLBAR_PADDING)/2, DOWN+TOOLBAR_SIZE)] => icon.positions;
 
@@ -238,13 +278,13 @@ class LineDraw extends Draw {
 
 
 class CircleDraw extends Draw {
-    GCircle icon --> this;
+    Circle icon --> this;
     0.5 => float icon_offset;
 
     fun @construct(Mouse @ mouse) {
         Draw(mouse);
 
-        @(.4, .4, .4) => icon.color;
+        COLOR_ICON => icon.color;
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, 0) => icon.pos;
         TOOLBAR_SIZE - TOOLBAR_PADDING => icon.sca;
 
@@ -362,8 +402,6 @@ class PlayLine extends GGen {
     }
 }
 
-
-// Line line(@(-3.3,3), @(1,0), Color.YELLOW, 0.3) --> GG.scene();
 
 while (true) {
     GG.nextFrame() => now;
