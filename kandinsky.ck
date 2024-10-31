@@ -137,10 +137,22 @@ class LinePlay {
     1 => static int ACTIVE;   // playing
     0 => int state;
 
-    PercFlut a => NRev rev => Pan2 pan => dac;
+    HevyMetl a => NRev rev => Pan2 pan => dac;
+    0.1 => rev.mix;
 
-    fun void play() {
+    fun setColor(vec3 color) {
+        Color.rgb2hsv(color) => vec3 hsv;
+        // map value(brightness) to pitch
+        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 100)) => a.freq;
+        // map saturation to loudness
+        Math.map2(hsv.y, 0., 1., .1, 0.7) => a.gain;
+    }
+
+    fun void play(float p) {
         // <<< "play" >>>;
+        // map pan
+        p => pan.pan;
+
         if (state == NONE) {
             ACTIVE => state;
             1 => a.noteOn;
@@ -159,13 +171,16 @@ class LinePlay {
 class Line extends Shape {
     GLines g --> this;
     vec2 start, end;
+    float slope;
     LinePlay lp;
 
     fun Line(vec2 start, vec2 end, vec3 color, float width, float depth) {
         start => this.start;
         end => this.end;
+        (start.y - end.y) / (start.x - end.x) => slope;
         width => g.width;
         color => g.color;
+        lp.setColor(color);
         g.positions([start, end]);
         depth => this.posZ;
     }
@@ -180,21 +195,69 @@ class Line extends Shape {
 
     fun void color(vec3 c) {
         g.color(c);
+        lp.setColor(c);
+    }
+
+    fun float getX(float y) {
+        return (1./slope) * (y - start.y) + start.x;
+    }
+
+    fun float getY(float x) {
+        return slope * (x - start.x) + start.y;
     }
 
     fun int touchX(float x) {
-        false => int ret;
         if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
-            lp.play();
-            true => ret;
+            // calculate the intersection's y
+            getY(x) => float y;
+            lp.play(y2pan(y));
+            return true;
         } else {
             lp.stop();
+            return false;
         }
-        return ret;
     }
 
     fun int touchY(float y) {
         return (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y));
+    }
+}
+
+class CirclePlay {
+    0 => static int NONE;  // not played
+    1 => static int ACTIVE;   // playing
+    0 => int state;
+
+    PercFlut a => NRev rev => Pan2 pan => dac;
+    0.1 => rev.mix;
+
+    fun setColor(vec3 color) {
+        Color.rgb2hsv(color) => vec3 hsv;
+        // map value(brightness) to pitch
+        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 50)) => a.freq;
+        // map saturation to loudness
+        Math.map2(hsv.y, 0., 1., .1, 1.2) => a.gain;
+    }
+
+    fun void play(float p, float amount) {
+        // <<< "play" >>>;
+        // map pan
+        p => pan.pan;
+        // map chord length to reverb
+        amount => rev.mix;
+
+        if (state == NONE) {
+            ACTIVE => state;
+            1 => a.noteOn;
+        }
+    }
+
+    fun void stop() {
+        // <<< "stop" >>>;
+        if (state == ACTIVE) {
+            NONE => state;
+            1 => a.noteOff;
+        }
     }
 }
 
@@ -204,6 +267,8 @@ class Circle extends Shape {
     g.mat(mat);
     CircleGeometry geo(.5, 96, 0., 2 * Math.pi);
     g.geo(geo);
+
+    CirclePlay cp;
 
     vec2 center;
     float r;
@@ -215,6 +280,7 @@ class Circle extends Shape {
         center.y => g.posY;
         r * 2. => g.sca;
         color => mat.color;
+        cp.setColor(color);
         depth => this.posZ;
     }
 
@@ -224,10 +290,19 @@ class Circle extends Shape {
 
     fun void color(vec3 c) {
         mat.color(c);
+        cp.setColor(c);
     }
 
     fun int touchX(float x) {
-        return (x >= center.x - r && x <= center.x + r);
+        if (x >= center.x - r && x <= center.x + r) {
+            // calculate chord length
+            Math.sqrt(r * r - (x - center.x) * (x - center.x)) / r => float amount;
+            cp.play(y2pan(center.y), amount);
+            return true;
+        } else {
+            cp.stop();
+            return false;
+        }
     }
 
     fun int touchY(float y) {
@@ -239,8 +314,9 @@ class Circle extends Shape {
 class ColorPicker extends GGen {
     // color picker
     Plane g --> this;
-    [Color.SKYBLUE, Color.BEIGE, Color.MAGENTA, Color.LIGHTGRAY] @=> vec3 presets[];
-    int idx;
+    vec3 color;
+    // [Color.SKYBLUE, Color.BEIGE, Color.MAGENTA, Color.LIGHTGRAY] @=> vec3 presets[];
+    // int idx;
 
     Mouse @ mouse;
     DrawEvent @ drawEvent;
@@ -250,20 +326,17 @@ class ColorPicker extends GGen {
         d @=> this.drawEvent;
 
         TOOLBAR_SIZE => g.sca;
-        0 => idx;
-        this.color() => g.color;
-        this.color() => this.drawEvent.color;
         @(0, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => g.pos;
-    }
-
-    fun vec3 color() {
-        return presets[idx];
+        nextColor();
     }
 
     fun void nextColor() {
-        (idx + 1) % presets.size() => idx;
-        presets[idx] => g.color;
-        this.color() => this.drawEvent.color;
+        // (idx + 1) % presets.size() => idx;
+        // presets[idx] => g.color;
+        @(Math.random2f(0, 360), Math.random2f(0, 1), Math.random2f(0, 1)) => vec3 hsv;
+        Color.hsv2rgb(hsv) => color;
+        color => g.color;
+        color => this.drawEvent.color;
     }
 
     fun int isHovered() {
@@ -283,6 +356,7 @@ class ColorPicker extends GGen {
 class Draw extends GGen {
     0 => static int NONE;  // not clicked
     1 => static int ACTIVE;   // clicked
+    0 => int state;
 
     Mouse @ mouse;
 
@@ -307,6 +381,7 @@ class Draw extends GGen {
         while (drawEvent.isNone() || drawEvent.isActive() && drawEvent.draw != this) {
             GG.nextFrame() => now;
             COLOR_ICONBG_NONE => this.icon_bg.color;
+            NONE => state;
         }
         // activated, change icon_bg color
         COLOR_ICONBG_ACTIVE => this.icon_bg.color;
@@ -320,7 +395,8 @@ class Draw extends GGen {
     fun int touchX(float x) {
         false => int touched;
         for (int i; i < length; ++i) {
-            touched || shapes[i].touchX(x) => touched;
+            shapes[i].touchX(x) => int tmp;
+            touched || tmp => touched;
         }
         return touched;
     }
@@ -328,7 +404,8 @@ class Draw extends GGen {
     fun int touchY(float y) {
         false => int touched;
         for (int i; i < length; ++i) {
-            touched || shapes[i].touchY(y) => touched;
+            shapes[i].touchY(y) => int tmp;
+            touched || tmp => touched;
         }
         return touched;
     }
@@ -352,7 +429,6 @@ class LineDraw extends Draw {
     fun void draw(DrawEvent @ drawEvent) {
         // <<< "LineDraw", me.id() >>>;
         vec2 start, end;
-        0 => int state; // current state
 
         while (true) {
             GG.nextFrame() => now;
@@ -395,7 +471,6 @@ class CircleDraw extends Draw {
         // <<< "CircleDraw", me.id() >>>;
         vec2 center;
         float radius;
-        0 => int state;
 
         while (true) {
             GG.nextFrame() => now;
