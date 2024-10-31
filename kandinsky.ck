@@ -49,6 +49,7 @@ LineDraw lineDraw(mouse) @=> draws[0];
 CircleDraw circleDraw(mouse) @=> draws[1];
 for (auto draw : draws) {
     draw --> GG.scene();
+    spork ~ draw.draw(drawEvent);
 }
 spork ~ select_drawtool(mouse, draws, drawEvent);
 
@@ -56,7 +57,7 @@ ColorPicker colorPicker(mouse, drawEvent) --> scene;
 spork ~ colorPicker.pick();
 
 PlayLine playline --> scene;
-spork ~ playline.play();
+spork ~ playline.play(draws);
 
 // simplified Mouse class from examples/input/Mouse.ck  =======================
 class Mouse {
@@ -90,6 +91,15 @@ fun int isHoveredGGen(Mouse @ mouse, GGen @ g) {
     return false;
 }
 
+fun float x2pan(float x) {
+    return x / WIDTH;
+}
+
+fun float y2pan(float y) {
+    return -y / HEIGHT;
+    // TODO: specify play direction
+}
+
 // Various object class for painting ==========================================
 
 class Plane extends GGen {
@@ -113,9 +123,43 @@ class Plane extends GGen {
     }
 }
 
-class Line extends GGen {
+class Shape extends GGen {
+    fun int touchX(float x) {
+        return false;
+    }
+    fun int touchY(float y) {
+        return false;
+    }
+}
+
+class LinePlay {
+    0 => static int NONE;  // not played
+    1 => static int ACTIVE;   // playing
+    0 => int state;
+
+    PercFlut a => NRev rev => Pan2 pan => dac;
+
+    fun void play() {
+        // <<< "play" >>>;
+        if (state == NONE) {
+            ACTIVE => state;
+            1 => a.noteOn;
+        }
+    }
+
+    fun void stop() {
+        // <<< "stop" >>>;
+        if (state == ACTIVE) {
+            NONE => state;
+            1 => a.noteOff;
+        }
+    }
+}
+
+class Line extends Shape {
     GLines g --> this;
     vec2 start, end;
+    LinePlay lp;
 
     fun Line(vec2 start, vec2 end, vec3 color, float width, float depth) {
         start => this.start;
@@ -137,9 +181,24 @@ class Line extends GGen {
     fun void color(vec3 c) {
         g.color(c);
     }
+
+    fun int touchX(float x) {
+        false => int ret;
+        if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
+            lp.play();
+            true => ret;
+        } else {
+            lp.stop();
+        }
+        return ret;
+    }
+
+    fun int touchY(float y) {
+        return (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y));
+    }
 }
 
-class Circle extends GGen {
+class Circle extends Shape {
     GCircle g --> this;
     FlatMaterial mat;
     g.mat(mat);
@@ -165,6 +224,14 @@ class Circle extends GGen {
 
     fun void color(vec3 c) {
         mat.color(c);
+    }
+
+    fun int touchX(float x) {
+        return (x >= center.x - r && x <= center.x + r);
+    }
+
+    fun int touchY(float y) {
+        return (y >= center.y - r && y <= center.y + r);
     }
 }
 
@@ -221,6 +288,9 @@ class Draw extends GGen {
 
     Plane icon_bg --> this;
 
+    Shape @ shapes[1000];
+    0 => int length;
+
     fun @construct(Mouse @ m) {
         m @=> this.mouse;
 
@@ -232,32 +302,41 @@ class Draw extends GGen {
         return isHoveredGGen(mouse, icon_bg);
     }
 
-    fun void activate() {
-        // change icon_bg color
-        COLOR_ICONBG_ACTIVE => this.icon_bg.color;
-    }
-
-    fun void test_deactivate_exit_shred(DrawEvent @ drawEvent) {
-        // when stop drawing / switch to other drawtools, exit this shred
-        if (drawEvent.isNone() || drawEvent.isActive() && drawEvent.draw != this) {
-            // <<< "exit..." >>>;
+    fun void waitActivate() {
+        // block if not activated
+        while (drawEvent.isNone() || drawEvent.isActive() && drawEvent.draw != this) {
+            GG.nextFrame() => now;
             COLOR_ICONBG_NONE => this.icon_bg.color;
-            me.exit();
         }
+        // activated, change icon_bg color
+        COLOR_ICONBG_ACTIVE => this.icon_bg.color;
     }
 
     // polymorphism placeholder
     fun void draw(DrawEvent @ drawEvent) {
         return;
     }
+
+    fun int touchX(float x) {
+        false => int touched;
+        for (int i; i < length; ++i) {
+            touched || shapes[i].touchX(x) => touched;
+        }
+        return touched;
+    }
+
+    fun int touchY(float y) {
+        false => int touched;
+        for (int i; i < length; ++i) {
+            touched || shapes[i].touchY(y) => touched;
+        }
+        return touched;
+    }
 }
 
 class LineDraw extends Draw {
     GLines icon --> this;
     -0.5 => float icon_offset;
-
-    Line @ lines[1000];
-    0 => int length;
 
     fun @construct(Mouse @ mouse) {
         Draw(mouse);
@@ -275,12 +354,10 @@ class LineDraw extends Draw {
         vec2 start, end;
         0 => int state; // current state
 
-        this.activate();
-
         while (true) {
             GG.nextFrame() => now;
 
-            this.test_deactivate_exit_shred(drawEvent);
+            this.waitActivate();
 
             if (state == NONE && GWindow.mouseLeftDown()) {
                 ACTIVE => state;
@@ -291,8 +368,9 @@ class LineDraw extends Draw {
                 this.mouse.pos => end;
 
                 // generate a new line
-                Line line(start, end, drawEvent.color, 0.1, drawEvent.depth) @=> lines[length++];
-                lines[length - 1] --> GG.scene();
+                Line line(start, end, drawEvent.color, 0.1, drawEvent.depth) @=> shapes[length++];
+                shapes[length - 1] --> GG.scene();
+                <<< "line", length >>>;
             }
         }
     }
@@ -302,9 +380,6 @@ class LineDraw extends Draw {
 class CircleDraw extends Draw {
     Circle icon --> this;
     0.5 => float icon_offset;
-
-    Circle @ circles[1000];
-    0 => int length;
 
     fun @construct(Mouse @ mouse) {
         Draw(mouse);
@@ -322,12 +397,10 @@ class CircleDraw extends Draw {
         float radius;
         0 => int state;
 
-        this.activate();
-
         while (true) {
             GG.nextFrame() => now;
 
-            this.test_deactivate_exit_shred(drawEvent);
+            this.waitActivate();
 
             if (state == NONE && GWindow.mouseLeftDown()) {
                 ACTIVE => state;
@@ -340,8 +413,9 @@ class CircleDraw extends Draw {
                 Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
 
                 // generate a new line
-                Circle circle(center, radius, drawEvent.color, drawEvent.depth) @=> circles[length++];
-                circles[length - 1]  --> GG.scene();
+                Circle circle(center, radius, drawEvent.color, drawEvent.depth) @=> shapes[length++];
+                shapes[length - 1]  --> GG.scene();
+                <<< "circle", length >>>;
             }
         }
     }
@@ -389,7 +463,6 @@ fun void select_drawtool(Mouse @ m, Draw draws[], DrawEvent @ drawEvent) {
                     <<< "activate" >>>;
                     drawEvent.setActive(draw);
                     drawEvent.broadcast();
-                    spork ~ draw.draw(drawEvent);
                 } else if (drawEvent.isActive() && drawEvent.draw == draw) {
                     // deactivate
                     <<< "deactivate" >>>;
@@ -410,17 +483,21 @@ class PlayLine extends GGen {
     // place line
     line.positions([@(LEFT, DOWN), @(LEFT, UP)]);
 
-    fun play() {
+    fun play(Draw draws[]) {
         while (true) {
+            GG.nextFrame() => now;
+            GG.dt() * 2 => float t;
+            t => line.translateX;
+
             if (line.posX() > WIDTH) {
                 0 => line.posX;
             }
 
             line.posX() - WIDTH / 2 => float x;
 
-            GG.nextFrame() => now;
-            GG.dt() * 2 => float t;
-            t => line.translateX;
+            for (auto draw : draws) {
+                draw.touchX(x);
+            }
         }
     }
 }
