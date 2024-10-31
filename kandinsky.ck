@@ -43,7 +43,14 @@ HEIGHT => background.scaY;
 @(1., 1., 1.) * 5 => background.color;
 
 DrawEvent drawEvent;
-spork ~ select_drawtool(mouse, drawEvent);
+// polymorphism
+Draw @ draws[2];
+LineDraw lineDraw(mouse) @=> draws[0];
+CircleDraw circleDraw(mouse) @=> draws[1];
+for (auto draw : draws) {
+    draw --> GG.scene();
+}
+spork ~ select_drawtool(mouse, draws, drawEvent);
 
 ColorPicker colorPicker(mouse, drawEvent) --> scene;
 spork ~ colorPicker.pick();
@@ -94,6 +101,7 @@ class Plane extends GGen {
         @(pos.x, pos.y, depth) => g.pos;
         scale => g.sca;
         color => mat.color;
+        depth => this.posZ;
     }
 
     fun vec3 color() {
@@ -107,8 +115,11 @@ class Plane extends GGen {
 
 class Line extends GGen {
     GLines g --> this;
+    vec2 start, end;
 
     fun Line(vec2 start, vec2 end, vec3 color, float width, float depth) {
+        start => this.start;
+        end => this.end;
         width => g.width;
         color => g.color;
         g.positions([start, end]);
@@ -132,8 +143,15 @@ class Circle extends GGen {
     GCircle g --> this;
     FlatMaterial mat;
     g.mat(mat);
+    CircleGeometry geo(.5, 96, 0., 2 * Math.pi);
+    g.geo(geo);
+
+    vec2 center;
+    float r;
 
     fun Circle(vec2 center, float r, vec3 color, float depth) {
+        center => this.center;
+        r => this.r;
         center.x => g.posX;
         center.y => g.posY;
         r * 2. => g.sca;
@@ -238,6 +256,9 @@ class LineDraw extends Draw {
     GLines icon --> this;
     -0.5 => float icon_offset;
 
+    Line @ lines[1000];
+    0 => int length;
+
     fun @construct(Mouse @ mouse) {
         Draw(mouse);
 
@@ -270,7 +291,8 @@ class LineDraw extends Draw {
                 this.mouse.pos => end;
 
                 // generate a new line
-                Line line(start, end, drawEvent.color, 0.1, drawEvent.depth) --> GG.scene();
+                Line line(start, end, drawEvent.color, 0.1, drawEvent.depth) @=> lines[length++];
+                lines[length - 1] --> GG.scene();
             }
         }
     }
@@ -280,6 +302,9 @@ class LineDraw extends Draw {
 class CircleDraw extends Draw {
     Circle icon --> this;
     0.5 => float icon_offset;
+
+    Circle @ circles[1000];
+    0 => int length;
 
     fun @construct(Mouse @ mouse) {
         Draw(mouse);
@@ -315,7 +340,8 @@ class CircleDraw extends Draw {
                 Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
 
                 // generate a new line
-                Circle circle(center, radius, drawEvent.color, drawEvent.depth) --> GG.scene();
+                Circle circle(center, radius, drawEvent.color, drawEvent.depth) @=> circles[length++];
+                circles[length - 1]  --> GG.scene();
             }
         }
     }
@@ -352,16 +378,7 @@ class DrawEvent extends Event {
     }
 }
 
-fun void select_drawtool(Mouse @ m, DrawEvent @ drawEvent) {
-    // polymorphism
-    Draw @ draws[2];
-    new LineDraw(m) @=> draws[0];
-    new CircleDraw(m) @=> draws[1];
-    for (auto draw : draws) {
-        draw --> GG.scene();
-    }
-    <<< me.id() >>>;
-
+fun void select_drawtool(Mouse @ m, Draw draws[], DrawEvent @ drawEvent) {
     while (true) {
         GG.nextFrame() => now;
         for (auto draw : draws) {
@@ -395,8 +412,14 @@ class PlayLine extends GGen {
 
     fun play() {
         while (true) {
+            if (line.posX() > WIDTH) {
+                0 => line.posX;
+            }
+
+            line.posX() - WIDTH / 2 => float x;
+
             GG.nextFrame() => now;
-            GG.dt() * 0.5 => float t;
+            GG.dt() * 2 => float t;
             t => line.translateX;
         }
     }
