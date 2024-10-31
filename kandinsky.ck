@@ -42,9 +42,10 @@ HEIGHT => background.scaY;
 @(1., 1., 1.) * 5 => background.color;
 
 DrawEvent drawEvent;
-LineDraw linedraw(mouse);
-CircleDraw circledraw(mouse);
 spork ~ select_drawtool(mouse, drawEvent);
+
+ColorPicker colorPicker(mouse, drawEvent) --> scene;
+spork ~ colorPicker.pick();
 
 PlayLine playline --> scene;
 spork ~ playline.play();
@@ -63,6 +64,22 @@ class Mouse {
             worldPos.y => this.pos.y;
         }
     }
+}
+
+// good global functions ======================================================
+
+// returns true if mouse is hovering over a GGen
+fun int isHoveredGGen(Mouse @ mouse, GGen @ g) {
+    g.scaWorld() => vec3 worldScale;  // get dimensions
+    worldScale.x / 2.0 => float halfWidth;
+    worldScale.y / 2.0 => float halfHeight;
+    g.posWorld() => vec3 pos;   // get position
+
+    if (mouse.pos.x > pos.x - halfWidth && mouse.pos.x < pos.x + halfWidth &&
+        mouse.pos.y > pos.y - halfHeight && mouse.pos.y < pos.y + halfHeight) {
+        return true;
+    }
+    return false;
 }
 
 // Various object class for painting ==========================================
@@ -91,13 +108,58 @@ class Circle extends GGen {
     }
 }
 
-class Draw {
+// Toolbar: Drawing tools and color picker =============================================
+class ColorPicker extends GGen {
+    // color picker
+    GPlane g --> this;
+    [Color.SKYBLUE, Color.BEIGE, Color.MAGENTA, Color.LIGHTGRAY] @=> vec3 presets[];
+    int idx;
+
+    Mouse @ mouse;
+    DrawEvent @ drawEvent;
+
+    fun ColorPicker(Mouse @ m, DrawEvent @ d) {
+        m @=> this.mouse;
+        d @=> this.drawEvent;
+
+        TOOLBAR_SIZE => g.sca;
+        0 => idx;
+        this.color() => g.color;
+        this.color() => this.drawEvent.color;
+        @(0, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => g.pos;
+    }
+
+    fun vec3 color() {
+        return presets[idx];
+    }
+
+    fun void nextColor() {
+        (idx + 1) % presets.size() => idx;
+        presets[idx] => g.color;
+        this.color() => this.drawEvent.color;
+    }
+
+    fun int isHovered() {
+        return isHoveredGGen(mouse, g);
+    }
+
+    fun void pick() {
+        while (true) {
+            GG.nextFrame() => now;
+            if (GWindow.mouseLeftDown() && this.isHovered()) {
+                this.nextColor();
+            }
+        }
+    }
+}
+
+class Draw extends GGen {
     0 => static int NONE;  // not clicked
     1 => static int ACTIVE;   // clicked
 
     Mouse @ mouse;
 
-    GPlane icon_bg --> GG.scene();
+    GPlane icon_bg --> this;
 
     fun @construct(Mouse @ m) {
         m @=> this.mouse;
@@ -106,18 +168,8 @@ class Draw {
         COLOR_ICONBG_NONE => icon_bg.color;
     }
 
-    // returns true if mouse is hovering over icon_bg
     fun int isHovered() {
-        icon_bg.scaWorld() => vec3 worldScale;  // get dimensions
-        worldScale.x / 2.0 => float halfWidth;
-        worldScale.y / 2.0 => float halfHeight;
-        icon_bg.posWorld() => vec3 pos;   // get position
-
-        if (this.mouse.pos.x > pos.x - halfWidth && this.mouse.pos.x < pos.x + halfWidth &&
-            this.mouse.pos.y > pos.y - halfHeight && this.mouse.pos.y < pos.y + halfHeight) {
-            return true;
-        }
-        return false;
+        return isHoveredGGen(mouse, icon_bg);
     }
 
     fun void activate() {
@@ -135,14 +187,14 @@ class Draw {
     }
 
     // polymorphism placeholder
-    fun void draw(DrawEvent drawEvent) {
+    fun void draw(DrawEvent @ drawEvent) {
         return;
     }
 }
 
 class LineDraw extends Draw {
-    GLines icon --> GG.scene();
-    -0.25 => float icon_offset;
+    GLines icon --> this;
+    -0.5 => float icon_offset;
 
     fun @construct(Mouse @ mouse) {
         Draw(mouse);
@@ -155,7 +207,7 @@ class LineDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun void draw(DrawEvent drawEvent) {
+    fun void draw(DrawEvent @ drawEvent) {
         // <<< "LineDraw", me.id() >>>;
         vec2 start, end;
         0 => int state; // current state
@@ -175,7 +227,7 @@ class LineDraw extends Draw {
                 this.mouse.pos => end;
 
                 // generate a new line
-                Line line(start, end, Color.YELLOW, 0.1) --> GG.scene();
+                Line line(start, end, drawEvent.color, 0.1) --> GG.scene();
             }
         }
     }
@@ -183,8 +235,8 @@ class LineDraw extends Draw {
 
 
 class CircleDraw extends Draw {
-    GCircle icon --> GG.scene();
-    0.25 => float icon_offset;
+    GCircle icon --> this;
+    0.5 => float icon_offset;
 
     fun @construct(Mouse @ mouse) {
         Draw(mouse);
@@ -196,7 +248,7 @@ class CircleDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun void draw(DrawEvent drawEvent) {
+    fun void draw(DrawEvent @ drawEvent) {
         // <<< "CircleDraw", me.id() >>>;
         vec2 center;
         float radius;
@@ -219,7 +271,7 @@ class CircleDraw extends Draw {
                 Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
 
                 // generate a new line
-                Circle circle(center, radius, Color.RED) --> GG.scene();
+                Circle circle(center, radius, drawEvent.color) --> GG.scene();
             }
         }
     }
@@ -230,6 +282,7 @@ class DrawEvent extends Event {
     1 => static int ACTIVE;  // drawtool selected
     0 => int state;
     Draw @ draw;  // reference to the selected drawtool
+    vec3 color;
 
     fun int isNone() {
         return state == NONE;
@@ -250,11 +303,14 @@ class DrawEvent extends Event {
     }
 }
 
-fun void select_drawtool(Mouse @ m, DrawEvent drawEvent) {
+fun void select_drawtool(Mouse @ m, DrawEvent @ drawEvent) {
     // polymorphism
     Draw @ draws[2];
     new LineDraw(m) @=> draws[0];
     new CircleDraw(m) @=> draws[1];
+    for (auto draw : draws) {
+        draw --> GG.scene();
+    }
     <<< me.id() >>>;
 
     while (true) {
