@@ -6,6 +6,7 @@
 // date: Fall 2024
 //-----------------------------------------------------------------------------
 @import "ChuGL.chug"
+@import "shapes.ck"
 
 // Initialize Mouse Manager ===================================================
 Mouse mouse;
@@ -37,7 +38,7 @@ HEIGHT / 2 => float UP;
 @(.2, .2, .2) => vec3 COLOR_ICON;
 
 // white background
-Plane background --> scene;
+TPlane background --> scene;
 WIDTH => background.scaX;
 HEIGHT => background.scaY;
 -90 => background.posZ;
@@ -92,27 +93,18 @@ fun int isHoveredGGen(Mouse @ mouse, GGen @ g) {
     return false;
 }
 
-fun float x2pan(float x) {
-    return x / WIDTH;
-}
+// Toolbar: Drawing tools and color picker =============================================
 
-fun float y2pan(float y) {
-    return -y / HEIGHT;
-    // TODO: specify play direction
-}
-
-// Various object class for painting ==========================================
-
-class Plane extends GGen {
+class TPlane extends GGen {
+    // a convenient plane class for toolbar setup
     GPlane g --> this;
     FlatMaterial mat;
     g.mat(mat);
 
-    fun Plane(vec2 pos, float scale, vec3 color, float depth) {
-        @(pos.x, pos.y, depth) => g.pos;
-        scale => g.sca;
+    fun TPlane(vec2 pos, float scale, vec3 color, float depth) {
+        @(pos.x, pos.y, depth) => this.pos;
+        scale => this.sca;
         color => mat.color;
-        depth => this.posZ;
     }
 
     fun vec3 color() {
@@ -124,197 +116,9 @@ class Plane extends GGen {
     }
 }
 
-class Shape extends GGen {
-    fun int touchX(float x) {
-        return false;
-    }
-    fun int touchY(float y) {
-        return false;
-    }
-}
-
-class LinePlay {
-    0 => static int NONE;  // not played
-    1 => static int ACTIVE;   // playing
-    0 => int state;
-
-    HevyMetl a => NRev rev => Pan2 pan => dac;
-    0.1 => rev.mix;
-
-    fun setColor(vec3 color) {
-        Color.rgb2hsv(color) => vec3 hsv;
-        // map value(brightness) to pitch
-        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 100)) => a.freq;
-        // map saturation to loudness
-        Math.map2(hsv.y, 0., 1., .1, 0.7) => a.gain;
-    }
-
-    fun void play(float p) {
-        // <<< "play" >>>;
-        // map pan
-        p => pan.pan;
-
-        if (state == NONE) {
-            ACTIVE => state;
-            1 => a.noteOn;
-        }
-    }
-
-    fun void stop() {
-        // <<< "stop" >>>;
-        if (state == ACTIVE) {
-            NONE => state;
-            1 => a.noteOff;
-        }
-    }
-}
-
-class Line extends Shape {
-    GLines g --> this;
-    vec2 start, end;
-    float slope;
-    LinePlay lp;
-
-    fun Line(vec2 start, vec2 end, vec3 color, float width, float depth) {
-        start => this.start;
-        end => this.end;
-        (start.y - end.y) / (start.x - end.x) => slope;
-        width => g.width;
-        color => g.color;
-        lp.setColor(color);
-        g.positions([start, end]);
-        depth => this.posZ;
-    }
-
-    fun void updatePos(vec2 start, vec2 end) {
-        g.positions([start, end]);
-    }
-
-    fun vec3 color() {
-        return g.color();
-    }
-
-    fun void color(vec3 c) {
-        g.color(c);
-        lp.setColor(c);
-    }
-
-    fun float getX(float y) {
-        return (1./slope) * (y - start.y) + start.x;
-    }
-
-    fun float getY(float x) {
-        return slope * (x - start.x) + start.y;
-    }
-
-    fun int touchX(float x) {
-        if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
-            // calculate the intersection's y
-            getY(x) => float y;
-            lp.play(y2pan(y));
-            return true;
-        } else {
-            lp.stop();
-            return false;
-        }
-    }
-
-    fun int touchY(float y) {
-        return (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y));
-    }
-}
-
-class CirclePlay {
-    0 => static int NONE;  // not played
-    1 => static int ACTIVE;   // playing
-    0 => int state;
-
-    PercFlut a => NRev rev => Pan2 pan => dac;
-    0.1 => rev.mix;
-
-    fun setColor(vec3 color) {
-        Color.rgb2hsv(color) => vec3 hsv;
-        // map value(brightness) to pitch
-        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 50)) => a.freq;
-        // map saturation to loudness
-        Math.map2(hsv.y, 0., 1., .1, 1.2) => a.gain;
-    }
-
-    fun void play(float p, float amount) {
-        // <<< "play" >>>;
-        // map pan
-        p => pan.pan;
-        // map chord length to reverb
-        amount => rev.mix;
-
-        if (state == NONE) {
-            ACTIVE => state;
-            1 => a.noteOn;
-        }
-    }
-
-    fun void stop() {
-        // <<< "stop" >>>;
-        if (state == ACTIVE) {
-            NONE => state;
-            1 => a.noteOff;
-        }
-    }
-}
-
-class Circle extends Shape {
-    GCircle g --> this;
-    FlatMaterial mat;
-    g.mat(mat);
-    CircleGeometry geo(.5, 96, 0., 2 * Math.pi);
-    g.geo(geo);
-
-    CirclePlay cp;
-
-    vec2 center;
-    float r;
-
-    fun Circle(vec2 center, float r, vec3 color, float depth) {
-        center => this.center;
-        r => this.r;
-        center.x => g.posX;
-        center.y => g.posY;
-        r * 2. => g.sca;
-        color => mat.color;
-        cp.setColor(color);
-        depth => this.posZ;
-    }
-
-    fun vec3 color() {
-        return mat.color();
-    }
-
-    fun void color(vec3 c) {
-        mat.color(c);
-        cp.setColor(c);
-    }
-
-    fun int touchX(float x) {
-        if (x >= center.x - r && x <= center.x + r) {
-            // calculate chord length
-            Math.sqrt(r * r - (x - center.x) * (x - center.x)) / r => float amount;
-            cp.play(y2pan(center.y), amount);
-            return true;
-        } else {
-            cp.stop();
-            return false;
-        }
-    }
-
-    fun int touchY(float y) {
-        return (y >= center.y - r && y <= center.y + r);
-    }
-}
-
-// Toolbar: Drawing tools and color picker =============================================
 class ColorPicker extends GGen {
     // color picker
-    Plane g --> this;
+    TPlane g --> this;
     vec3 color;
     // [Color.SKYBLUE, Color.BEIGE, Color.MAGENTA, Color.LIGHTGRAY] @=> vec3 presets[];
     // int idx;
@@ -361,7 +165,7 @@ class Draw extends GGen {
 
     Mouse @ mouse;
 
-    Plane icon_bg --> this;
+    TPlane icon_bg --> this;
 
     Shape @ shapes[1000];
     0 => int length;
