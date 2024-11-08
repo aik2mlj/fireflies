@@ -5,6 +5,7 @@
 // author: Lejun Min  (https://aik2.site)
 // date: Fall 2024
 //-----------------------------------------------------------------------------
+@import "ChuGL.chug"
 
 // Initialize Mouse Manager ===================================================
 Mouse mouse;
