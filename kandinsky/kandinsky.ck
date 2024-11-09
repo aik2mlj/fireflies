@@ -46,9 +46,10 @@ HEIGHT => background.scaY;
 
 DrawEvent drawEvent;
 // polymorphism
-Draw @ draws[2];
+Draw @ draws[3];
 LineDraw lineDraw(mouse) @=> draws[0];
 CircleDraw circleDraw(mouse) @=> draws[1];
+Eraser eraser(mouse) @=> draws[2];
 for (auto draw : draws) {
     draw --> GG.scene();
     spork ~ draw.draw(drawEvent);
@@ -59,23 +60,7 @@ ColorPicker colorPicker(mouse, drawEvent) --> scene;
 spork ~ colorPicker.pick();
 
 PlayLine playline --> scene;
-spork ~ playline.play(draws);
-
-// simplified Mouse class from examples/input/Mouse.ck  =======================
-class Mouse {
-    vec2 pos;
-
-    // update mouse world position
-    fun void selfUpdate() {
-        while (true) {
-            GG.nextFrame() => now;
-            // calculate mouse world X and Y coords
-            GG.camera().screenCoordToWorldPos(GWindow.mousePos(), 1.0) => vec3 worldPos;
-            worldPos.x => this.pos.x;
-            worldPos.y => this.pos.y;
-        }
-    }
-}
+spork ~ playline.play(drawEvent);
 
 // good global functions ======================================================
 
@@ -86,11 +71,8 @@ fun int isHoveredGGen(Mouse @ mouse, GGen @ g) {
     worldScale.y / 2.0 => float halfHeight;
     g.posWorld() => vec3 pos;   // get position
 
-    if (mouse.pos.x > pos.x - halfWidth && mouse.pos.x < pos.x + halfWidth &&
-        mouse.pos.y > pos.y - halfHeight && mouse.pos.y < pos.y + halfHeight) {
-        return true;
-    }
-    return false;
+    return (mouse.pos.x > pos.x - halfWidth && mouse.pos.x < pos.x + halfWidth &&
+            mouse.pos.y > pos.y - halfHeight && mouse.pos.y < pos.y + halfHeight);
 }
 
 // Toolbar: Drawing tools and color picker =============================================
@@ -167,9 +149,6 @@ class Draw extends GGen {
 
     TPlane icon_bg --> this;
 
-    Shape @ shapes[1000];
-    0 => int length;
-
     fun @construct(Mouse @ m) {
         m @=> this.mouse;
 
@@ -179,6 +158,11 @@ class Draw extends GGen {
 
     fun int isHovered() {
         return isHoveredGGen(mouse, icon_bg);
+    }
+
+    fun int isHoveredToolbar() {
+        // if the mouse is hovered on toolbar
+        return mouse.pos.y < DOWN + TOOLBAR_SIZE + TOOLBAR_PADDING;
     }
 
     fun void waitActivate() {
@@ -195,24 +179,6 @@ class Draw extends GGen {
     // polymorphism placeholder
     fun void draw(DrawEvent @ drawEvent) {
         return;
-    }
-
-    fun int touchX(float x) {
-        false => int touched;
-        for (int i; i < length; ++i) {
-            shapes[i].touchX(x) => int tmp;
-            touched || tmp => touched;
-        }
-        return touched;
-    }
-
-    fun int touchY(float y) {
-        false => int touched;
-        for (int i; i < length; ++i) {
-            shapes[i].touchY(y) => int tmp;
-            touched || tmp => touched;
-        }
-        return touched;
     }
 }
 
@@ -232,7 +198,6 @@ class LineDraw extends Draw {
     }
 
     fun void draw(DrawEvent @ drawEvent) {
-        // <<< "LineDraw", me.id() >>>;
         vec2 start, end;
 
         while (true) {
@@ -240,7 +205,7 @@ class LineDraw extends Draw {
 
             this.waitActivate();
 
-            if (state == NONE && GWindow.mouseLeftDown()) {
+            if (state == NONE && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
                 ACTIVE => state;
                 drawEvent.incDepth();
                 this.mouse.pos => start;
@@ -249,9 +214,9 @@ class LineDraw extends Draw {
                 this.mouse.pos => end;
 
                 // generate a new line
-                Line line(start, end, drawEvent.color, 0.1, drawEvent.depth) @=> shapes[length++];
-                shapes[length - 1] --> GG.scene();
-                <<< "line", length >>>;
+                Line line(start, end, drawEvent.color, 0.1, drawEvent.depth) @=> drawEvent.shapes[drawEvent.length++];
+                drawEvent.shapes[drawEvent.length - 1] --> GG.scene();
+                <<< "line", drawEvent.length >>>;
             }
         }
     }
@@ -282,7 +247,7 @@ class CircleDraw extends Draw {
 
             this.waitActivate();
 
-            if (state == NONE && GWindow.mouseLeftDown()) {
+            if (state == NONE && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
                 ACTIVE => state;
                 drawEvent.incDepth();
                 this.mouse.pos => center;
@@ -293,9 +258,60 @@ class CircleDraw extends Draw {
                 Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
 
                 // generate a new line
-                Circle circle(center, radius, drawEvent.color, drawEvent.depth) @=> shapes[length++];
-                shapes[length - 1]  --> GG.scene();
-                <<< "circle", length >>>;
+                Circle circle(center, radius, drawEvent.color, drawEvent.depth) @=> drawEvent.shapes[drawEvent.length++];
+                drawEvent.shapes[drawEvent.length - 1]  --> GG.scene();
+                <<< "circle", drawEvent.length >>>;
+            }
+        }
+    }
+}
+
+class Eraser extends Draw {
+    GLines icon_0 --> this;
+    GLines icon_1 --> this;
+    1 => float icon_offset;
+
+    fun @construct(Mouse @ mouse) {
+        Draw(mouse);
+
+        0.08 => icon_0.width;
+        0.08 => icon_1.width;
+        COLOR_ICON => icon_0.color;
+        COLOR_ICON => icon_1.color;
+        [@(icon_offset-(TOOLBAR_SIZE-TOOLBAR_PADDING)/2, DOWN+TOOLBAR_PADDING),
+            @(icon_offset+(TOOLBAR_SIZE-TOOLBAR_PADDING)/2, DOWN+TOOLBAR_SIZE)] => icon_0.positions;
+        [@(icon_offset-(TOOLBAR_SIZE-TOOLBAR_PADDING)/2, DOWN+TOOLBAR_SIZE),
+            @(icon_offset+(TOOLBAR_SIZE-TOOLBAR_PADDING)/2, DOWN+TOOLBAR_PADDING)] => icon_1.positions;
+
+        @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
+    }
+
+    fun void draw(DrawEvent @ drawEvent) {
+        vec2 pos;
+        while (true) {
+            GG.nextFrame() => now;
+
+            this.waitActivate();
+
+            if (state == NONE && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
+                ACTIVE => state;
+                this.mouse.pos => pos;
+            } else if (state == ACTIVE && GWindow.mouseLeftUp()) {
+                NONE => state;
+
+                for (drawEvent.length - 1 => int i; i >= 0; --i) {
+                    if (drawEvent.shapes[i].isHovered(mouse)) {
+                        drawEvent.shapes[i] --< GG.scene();
+                        // move forward
+                        for (i => int j; j < drawEvent.length - 1; ++j) {
+                            drawEvent.shapes[j + 1] @=> drawEvent.shapes[j];
+                        }
+                        // decrease length
+                        drawEvent.length--;
+                        // just erase one shape
+                        break;
+                    }
+                }
             }
         }
     }
@@ -308,6 +324,10 @@ class DrawEvent extends Event {
     Draw @ draw;  // reference to the selected drawtool
     vec3 color;  // selected color
     -50 => float depth;  // current depth of the drawed object
+
+    // all the drawed shapes
+    Shape @ shapes[1000];
+    0 => int length;
 
     fun int isNone() {
         return state == NONE;
@@ -330,6 +350,24 @@ class DrawEvent extends Event {
     fun void incDepth() {
         depth + 0.001 => depth;
     }
+
+    fun int touchX(float x) {
+        false => int touched;
+        for (int i; i < length; ++i) {
+            shapes[i].touchX(x) => int tmp;
+            touched || tmp => touched;
+        }
+        return touched;
+    }
+
+    fun int touchY(float y) {
+        false => int touched;
+        for (int i; i < length; ++i) {
+            shapes[i].touchY(y) => int tmp;
+            touched || tmp => touched;
+        }
+        return touched;
+    }
 }
 
 fun void select_drawtool(Mouse @ m, Draw draws[], DrawEvent @ drawEvent) {
@@ -342,12 +380,12 @@ fun void select_drawtool(Mouse @ m, Draw draws[], DrawEvent @ drawEvent) {
                     // was inactive / switch activation
                     <<< "activate" >>>;
                     drawEvent.setActive(draw);
-                    drawEvent.broadcast();
+                    // drawEvent.broadcast();
                 } else if (drawEvent.isActive() && drawEvent.draw == draw) {
                     // deactivate
                     <<< "deactivate" >>>;
                     drawEvent.setNone();
-                    drawEvent.broadcast();
+                    // drawEvent.broadcast();
                 }
                 break;
             }
@@ -363,7 +401,7 @@ class PlayLine extends GGen {
     // place line
     line.positions([@(LEFT, DOWN), @(LEFT, UP)]);
 
-    fun play(Draw draws[]) {
+    fun play(DrawEvent @ drawEvent) {
         while (true) {
             GG.nextFrame() => now;
             GG.dt() * 2 => float t;
@@ -375,9 +413,7 @@ class PlayLine extends GGen {
 
             line.posX() - WIDTH / 2 => float x;
 
-            for (auto draw : draws) {
-                draw.touchX(x);
-            }
+            drawEvent.touchX(x);
         }
     }
 }
