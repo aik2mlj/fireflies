@@ -301,7 +301,10 @@ class Eraser extends Draw {
 
                 for (drawEvent.length - 1 => int i; i >= 0; --i) {
                     if (drawEvent.shapes[i].isHovered(mouse)) {
+                        // detached from scene
                         drawEvent.shapes[i] --< GG.scene();
+                        // stop playing
+                        drawEvent.shapes[i].stop();
                         // move forward
                         for (i => int j; j < drawEvent.length - 1; ++j) {
                             drawEvent.shapes[j + 1] @=> drawEvent.shapes[j];
