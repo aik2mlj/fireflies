@@ -59,13 +59,13 @@ HEIGHT => background.scaY;
 DrawEvent drawEvent;
 // polymorphism
 Draw @ draws[4];
-LineDraw lineDraw(mouse) @=> draws[0];
-CircleDraw circleDraw(mouse) @=> draws[1];
-PlaneDraw planeDraw(mouse) @=> draws[2];
-Eraser eraser(mouse) @=> draws[3];
+LineDraw lineDraw(mouse, drawEvent) @=> draws[0];
+CircleDraw circleDraw(mouse, drawEvent) @=> draws[1];
+PlaneDraw planeDraw(mouse, drawEvent) @=> draws[2];
+Eraser eraser(mouse, drawEvent) @=> draws[3];
 for (auto draw : draws) {
     draw --> GG.scene();
-    spork ~ draw.draw(drawEvent);
+    spork ~ draw.draw();
 }
 spork ~ select_drawtool(mouse, draws, drawEvent);
 
@@ -159,11 +159,13 @@ class Draw extends GGen {
     0 => int state;
 
     Mouse @ mouse;
+    DrawEvent @ drawEvent;
 
     TPlane icon_bg --> this;
 
-    fun @construct(Mouse @ m) {
+    fun @construct(Mouse @ m, DrawEvent @ d) {
         m @=> this.mouse;
+        d @=> this.drawEvent;
 
         TOOLBAR_SIZE => icon_bg.sca;
         COLOR_ICONBG_NONE => icon_bg.color;
@@ -190,12 +192,12 @@ class Draw extends GGen {
     }
 
     // polymorphism placeholder
-    fun Shape@ createShape(DrawEvent @ drawEvent, vec2 start, vec2 end) {
+    fun Shape@ createShape(vec2 start, vec2 end) {
         <<< "Warning: calling the default createShape, returning a null pointer!" >>>;
         return null;
     }
 
-    fun void draw(DrawEvent @ drawEvent) {
+    fun void draw() {
         vec2 start, end;
 
         while (true) {
@@ -211,7 +213,7 @@ class Draw extends GGen {
                 NONE => state;
                 this.mouse.pos => end;
 
-                createShape(drawEvent, start, end) @=> Shape @ shape;
+                createShape(start, end) @=> Shape @ shape;
                 <<< "draw", drawEvent.length >>>;
                 shape @=> drawEvent.shapes[drawEvent.length++];
                 shape --> GG.scene();
@@ -224,8 +226,8 @@ class LineDraw extends Draw {
     GLines icon --> this;
     -0.5 => float icon_offset;
 
-    fun @construct(Mouse @ mouse) {
-        Draw(mouse);
+    fun @construct(Mouse @ m, DrawEvent @ d) {
+        Draw(m, d);
 
         0.03 => icon.width;
         COLOR_ICON => icon.color;
@@ -235,7 +237,7 @@ class LineDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun Shape@ createShape(DrawEvent @ drawEvent, vec2 start, vec2 end) {
+    fun Shape@ createShape(vec2 start, vec2 end) {
         // generate a new line
         return new Line(start, end, drawEvent.color, 0.1, drawEvent.depth);
     }
@@ -246,8 +248,8 @@ class CircleDraw extends Draw {
     Circle icon --> this;
     0.5 => float icon_offset;
 
-    fun @construct(Mouse @ mouse) {
-        Draw(mouse);
+    fun @construct(Mouse @ m, DrawEvent @ d) {
+        Draw(m, d);
 
         COLOR_ICON => icon.color;
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, 0) => icon.pos;
@@ -256,7 +258,7 @@ class CircleDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun Shape@ createShape(DrawEvent @ drawEvent, vec2 start, vec2 end) {
+    fun Shape@ createShape(vec2 start, vec2 end) {
         (end - start) => vec2 r;
         Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
 
@@ -269,8 +271,8 @@ class PlaneDraw extends Draw {
     TPlane icon --> this;
     -1 => float icon_offset;
 
-    fun @construct(Mouse @ mouse) {
-        Draw(mouse);
+    fun @construct(Mouse @ m, DrawEvent @ d) {
+        Draw(m, d);
 
         COLOR_ICON => icon.color;
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, 0) => icon.pos;
@@ -279,7 +281,7 @@ class PlaneDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun Shape@ createShape(DrawEvent @ drawEvent, vec2 start, vec2 end) {
+    fun Shape@ createShape(vec2 start, vec2 end) {
         // generate a new plane
         return new Plane(start, end, drawEvent.color, drawEvent.depth);
     }
@@ -290,8 +292,8 @@ class Eraser extends Draw {
     GLines icon_1 --> this;
     1 => float icon_offset;
 
-    fun @construct(Mouse @ mouse) {
-        Draw(mouse);
+    fun @construct(Mouse @ m, DrawEvent @ d) {
+        Draw(m, d);
 
         0.08 => icon_0.width;
         0.08 => icon_1.width;
@@ -305,7 +307,7 @@ class Eraser extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun void draw(DrawEvent @ drawEvent) {
+    fun void draw() {
         vec2 pos;
         while (true) {
             GG.nextFrame() => now;
