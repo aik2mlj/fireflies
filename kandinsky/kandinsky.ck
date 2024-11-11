@@ -5,7 +5,6 @@
 // author: Lejun Min  (https://aik2.site)
 // date: Fall 2024
 //-----------------------------------------------------------------------------
-@import "ChuGL.chug"
 @import "shapes.ck"
 
 // Initialize Mouse Manager ===================================================
@@ -22,9 +21,19 @@ cam.orthographic();  // Orthographic camera mode for 2D scene
 GG.scene().light() @=> GLight light;
 0. => light.intensity;
 
+// bloom
+GG.outputPass() @=> OutputPass output_pass;
+GG.renderPass() --> BloomPass bloom_pass --> output_pass;
+bloom_pass.threshold(5);
+bloom_pass.intensity(1);
+bloom_pass.input(GG.renderPass().colorOutput());
+output_pass.input(bloom_pass.colorOutput());
+
 16.0 / 9.0 => float ASPECT;
 cam.viewSize() => float HEIGHT;
 cam.viewSize() * ASPECT => float WIDTH;
+<<< HEIGHT, WIDTH >>>;
+
 -WIDTH / 2 => float LEFT;
 WIDTH / 2 => float RIGHT;
 -HEIGHT / 2 => float DOWN;
@@ -46,10 +55,11 @@ HEIGHT => background.scaY;
 
 DrawEvent drawEvent;
 // polymorphism
-Draw @ draws[3];
+Draw @ draws[4];
 LineDraw lineDraw(mouse) @=> draws[0];
 CircleDraw circleDraw(mouse) @=> draws[1];
-Eraser eraser(mouse) @=> draws[2];
+PlaneDraw planeDraw(mouse) @=> draws[2];
+Eraser eraser(mouse) @=> draws[3];
 for (auto draw : draws) {
     draw --> GG.scene();
     spork ~ draw.draw(drawEvent);
@@ -257,10 +267,49 @@ class CircleDraw extends Draw {
                 (this.mouse.pos - center) => vec2 r;
                 Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
 
-                // generate a new line
+                // generate a new circle
                 Circle circle(center, radius, drawEvent.color, drawEvent.depth) @=> drawEvent.shapes[drawEvent.length++];
                 drawEvent.shapes[drawEvent.length - 1]  --> GG.scene();
                 <<< "circle", drawEvent.length >>>;
+            }
+        }
+    }
+}
+
+class PlaneDraw extends Draw {
+    TPlane icon --> this;
+    -1 => float icon_offset;
+
+    fun @construct(Mouse @ mouse) {
+        Draw(mouse);
+
+        COLOR_ICON => icon.color;
+        @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, 0) => icon.pos;
+        TOOLBAR_SIZE - TOOLBAR_PADDING => icon.sca;
+
+        @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
+    }
+
+    fun void draw(DrawEvent @ drawEvent) {
+        vec2 start, end;
+
+        while (true) {
+            GG.nextFrame() => now;
+
+            this.waitActivate();
+
+            if (state == NONE && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
+                ACTIVE => state;
+                drawEvent.incDepth();
+                this.mouse.pos => start;
+            } else if (state == ACTIVE && GWindow.mouseLeftUp()) {
+                NONE => state;
+                this.mouse.pos => end;
+
+                // generate a new plane
+                Plane plane(start, end, drawEvent.color, drawEvent.depth) @=> drawEvent.shapes[drawEvent.length++];
+                drawEvent.shapes[drawEvent.length - 1] --> GG.scene();
+                <<< "plane", drawEvent.length >>>;
             }
         }
     }

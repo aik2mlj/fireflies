@@ -4,10 +4,7 @@
 // Various object class for painting ==========================================
 
 public class Shape extends GGen {
-    GG.camera() @=> GCamera @ cam;
-    16.0 / 9.0 => float ASPECT;
-    cam.viewSize() => float HEIGHT;
-    cam.viewSize() * ASPECT => float WIDTH;
+    Const con;
 
     fun void stop() {
         // stop playing, useful when erasing shapes
@@ -22,11 +19,11 @@ public class Shape extends GGen {
     }
 
     fun float x2pan(float x) {
-        return x / WIDTH;
+        return x / Const.WIDTH;
     }
 
     fun float y2pan(float y) {
-        return -y / HEIGHT;
+        return -y / Const.HEIGHT;
         // TODO: specify play direction
     }
 
@@ -161,7 +158,7 @@ public class Circle extends Shape {
     fun int touchX(float x) {
         if (x >= center.x - r && x <= center.x + r) {
             // calculate chord length
-            Math.sqrt(r * r - (x - center.x) * (x - center.x)) / r => float amount;
+            Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
             play.play(y2pan(center.y), amount);
             return true;
         } else {
@@ -224,9 +221,12 @@ public class Plane extends Shape {
 
     fun int touchX(float x) {
         if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
+            play.play(y2pan(this.posY()), this.scaY());
             return true;
+        } else {
+            play.stop();
+            return false;
         }
-        return false;
     }
 
     fun int touchY(float y) {
