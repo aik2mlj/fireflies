@@ -62,7 +62,7 @@ public class CirclePlay extends Play {
         // map pan
         p => pan.pan;
         // map chord length to loudness
-        Math.map2(amount, 0., Const.HEIGHT, 0., 7.) => a.gain;
+        Math.map2(amount, 0., C.HEIGHT, 0., 7.) => a.gain;
 
         if (state == NONE) {
             ACTIVE => state;
@@ -96,7 +96,7 @@ public class PlanePlay extends Play {
         // map pan
         p => pan.pan;
         // map length to loudness
-        Math.map2(amount, 0., Const.HEIGHT, 0., 7.) => a.gain;
+        Math.map2(amount, 0., C.HEIGHT, 0., 7.) => a.gain;
 
         if (state == NONE) {
             ACTIVE => state;
