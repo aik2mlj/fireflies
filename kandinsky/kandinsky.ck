@@ -16,7 +16,7 @@ spork ~ mouse.selfUpdate(); // start updating mouse position
 
 // Scene setup ================================================================
 GG.scene() @=> GScene @ scene;
-GG.windowed(1600, 900);
+GG.windowed(1280, 720);
 GG.camera() @=> GCamera @ cam;
 cam.orthographic();  // Orthographic camera mode for 2D scene
 
