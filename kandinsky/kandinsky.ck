@@ -190,8 +190,33 @@ class Draw extends GGen {
     }
 
     // polymorphism placeholder
+    fun Shape@ createShape(DrawEvent @ drawEvent, vec2 start, vec2 end) {
+        <<< "Warning: calling the default createShape, returning a null pointer!" >>>;
+        return null;
+    }
+
     fun void draw(DrawEvent @ drawEvent) {
-        return;
+        vec2 start, end;
+
+        while (true) {
+            GG.nextFrame() => now;
+
+            this.waitActivate();
+
+            if (state == NONE && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
+                ACTIVE => state;
+                drawEvent.incDepth();
+                this.mouse.pos => start;
+            } else if (state == ACTIVE && GWindow.mouseLeftUp()) {
+                NONE => state;
+                this.mouse.pos => end;
+
+                createShape(drawEvent, start, end) @=> Shape @ shape;
+                <<< "draw", drawEvent.length >>>;
+                shape @=> drawEvent.shapes[drawEvent.length++];
+                shape --> GG.scene();
+            }
+        }
     }
 }
 
@@ -210,28 +235,9 @@ class LineDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun void draw(DrawEvent @ drawEvent) {
-        vec2 start, end;
-
-        while (true) {
-            GG.nextFrame() => now;
-
-            this.waitActivate();
-
-            if (state == NONE && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
-                ACTIVE => state;
-                drawEvent.incDepth();
-                this.mouse.pos => start;
-            } else if (state == ACTIVE && GWindow.mouseLeftUp()) {
-                NONE => state;
-                this.mouse.pos => end;
-
-                // generate a new line
-                Line line(start, end, drawEvent.color, 0.1, drawEvent.depth) @=> drawEvent.shapes[drawEvent.length++];
-                drawEvent.shapes[drawEvent.length - 1] --> GG.scene();
-                <<< "line", drawEvent.length >>>;
-            }
-        }
+    fun Shape@ createShape(DrawEvent @ drawEvent, vec2 start, vec2 end) {
+        // generate a new line
+        return new Line(start, end, drawEvent.color, 0.1, drawEvent.depth);
     }
 }
 
@@ -250,32 +256,12 @@ class CircleDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun void draw(DrawEvent @ drawEvent) {
-        // <<< "CircleDraw", me.id() >>>;
-        vec2 center;
-        float radius;
+    fun Shape@ createShape(DrawEvent @ drawEvent, vec2 start, vec2 end) {
+        (end - start) => vec2 r;
+        Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
 
-        while (true) {
-            GG.nextFrame() => now;
-
-            this.waitActivate();
-
-            if (state == NONE && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
-                ACTIVE => state;
-                drawEvent.incDepth();
-                this.mouse.pos => center;
-            }
-            if (state == ACTIVE && GWindow.mouseLeftUp()) {
-                NONE => state;
-                (this.mouse.pos - center) => vec2 r;
-                Math.sqrt(r.x * r.x + r.y * r.y) => float radius;
-
-                // generate a new circle
-                Circle circle(center, radius, drawEvent.color, drawEvent.depth) @=> drawEvent.shapes[drawEvent.length++];
-                drawEvent.shapes[drawEvent.length - 1]  --> GG.scene();
-                <<< "circle", drawEvent.length >>>;
-            }
-        }
+        // generate a new circle
+        return new Circle(start, radius, drawEvent.color, drawEvent.depth);
     }
 }
 
@@ -293,28 +279,9 @@ class PlaneDraw extends Draw {
         @(icon_offset, DOWN+(TOOLBAR_PADDING+TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
-    fun void draw(DrawEvent @ drawEvent) {
-        vec2 start, end;
-
-        while (true) {
-            GG.nextFrame() => now;
-
-            this.waitActivate();
-
-            if (state == NONE && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
-                ACTIVE => state;
-                drawEvent.incDepth();
-                this.mouse.pos => start;
-            } else if (state == ACTIVE && GWindow.mouseLeftUp()) {
-                NONE => state;
-                this.mouse.pos => end;
-
-                // generate a new plane
-                Plane plane(start, end, drawEvent.color, drawEvent.depth) @=> drawEvent.shapes[drawEvent.length++];
-                drawEvent.shapes[drawEvent.length - 1] --> GG.scene();
-                <<< "plane", drawEvent.length >>>;
-            }
-        }
+    fun Shape@ createShape(DrawEvent @ drawEvent, vec2 start, vec2 end) {
+        // generate a new plane
+        return new Plane(start, end, drawEvent.color, drawEvent.depth);
     }
 }
 
