@@ -170,13 +170,15 @@ public class LineDraw extends Draw {
 
 
 public class CircleDraw extends Draw {
-    Circle icon --> this;
+    GCircle icon --> this;
+    FlatMaterial mat;
+    icon.mat(mat);
     0.5 => float icon_offset;
 
     fun @construct(Mouse @ m, DrawEvent @ d) {
         Draw(m, d);
 
-        C.COLOR_ICON => icon.color;
+        C.COLOR_ICON => mat.color;
         @(icon_offset, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, 0) => icon.pos;
         C.TOOLBAR_SIZE - C.TOOLBAR_PADDING => icon.sca;
 
