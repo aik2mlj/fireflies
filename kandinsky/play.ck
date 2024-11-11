@@ -1,6 +1,8 @@
 @import "constant.ck"
 
-class Play {
+// play =======================================================================
+
+public class Play {
     0 => static int NONE;  // not played
     1 => static int ACTIVE;   // playing
     0 => int state;
@@ -13,13 +15,10 @@ class Play {
 public class LinePlay extends Play {
     FrencHrn a => NRev rev => Pan2 pan => dac;
     0.1 => rev.mix;
+    Line @ g;
 
-    fun setColor(vec3 color) {
-        Color.rgb2hsv(color) => vec3 hsv;
-        // map value(brightness) to pitch
-        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 100)) => a.freq;
-        // map saturation to loudness
-        Math.map2(hsv.y, 0., 1., .1, 0.7) => a.gain;
+    fun @construct(Line @ g) {
+        g @=> this.g;
     }
 
     fun void play(float p) {
@@ -48,6 +47,12 @@ public class CirclePlay extends Play {
     for (int ch; ch < 2; ++ch)
         pan.chan(ch) => rev[ch] => dac.chan(ch);
     0.2 => rev[0].mix => rev[1].mix;
+
+    Circle @ g;
+
+    fun @construct(Circle @ g) {
+        g @=> this.g;
+    }
 
     fun setColor(vec3 color) {
         Color.rgb2hsv(color) => vec3 hsv;
@@ -82,6 +87,12 @@ public class CirclePlay extends Play {
 public class PlanePlay extends Play {
     HevyMetl a => NRev rev => Pan2 pan => dac;
     0.1 => rev.mix;
+
+    Plane @ g;
+
+    fun @construct(Plane @ g) {
+        g @=> this.g;
+    }
 
     fun setColor(vec3 color) {
         Color.rgb2hsv(color) => vec3 hsv;

@@ -140,6 +140,8 @@ public class Draw extends GGen {
 
                 createShape(start, end) @=> Shape @ shape;
                 <<< "draw", drawEvent.length >>>;
+                // play the shape
+                shape.play();
                 shape @=> drawEvent.shapes[drawEvent.length++];
                 shape --> GG.scene();
             }
@@ -302,23 +304,23 @@ public class DrawEvent extends Event {
         depth + 0.001 => depth;
     }
 
-    fun int touchX(float x) {
-        false => int touched;
-        for (int i; i < length; ++i) {
-            shapes[i].touchX(x) => int tmp;
-            touched || tmp => touched;
-        }
-        return touched;
-    }
-
-    fun int touchY(float y) {
-        false => int touched;
-        for (int i; i < length; ++i) {
-            shapes[i].touchY(y) => int tmp;
-            touched || tmp => touched;
-        }
-        return touched;
-    }
+    // fun int touchX(float x) {
+    //     false => int touched;
+    //     for (int i; i < length; ++i) {
+    //         shapes[i].touchX(x) => int tmp;
+    //         touched || tmp => touched;
+    //     }
+    //     return touched;
+    // }
+    //
+    // fun int touchY(float y) {
+    //     false => int touched;
+    //     for (int i; i < length; ++i) {
+    //         shapes[i].touchY(y) => int tmp;
+    //         touched || tmp => touched;
+    //     }
+    //     return touched;
+    // }
 }
 
 public class PlayLine extends GGen {
@@ -341,7 +343,7 @@ public class PlayLine extends GGen {
 
             line.posX() - C.WIDTH / 2 => float x;
 
-            drawEvent.touchX(x);
+            // drawEvent.touchX(x);
         }
     }
 }

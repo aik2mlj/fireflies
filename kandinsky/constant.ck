@@ -7,14 +7,16 @@ public class C {
     -HEIGHT_GLB / 2 => static float DOWN_GLB;  // global bottom
     HEIGHT_GLB / 2 => static float UP;
 
-    // playback speed
-    2 => static float SPEED;
-
     // toolbar
     0.4 => static float TOOLBAR_SIZE;
     0.1 => static float TOOLBAR_PADDING;
     HEIGHT_GLB - TOOLBAR_SIZE - TOOLBAR_PADDING => static float HEIGHT;  // the height of the canvas
     DOWN_GLB + TOOLBAR_SIZE + TOOLBAR_PADDING => static float DOWN;  // the bottom of the canvas
+
+    // playback speed
+    2 => static float SPEED;
+    (WIDTH / SPEED)::second => static dur TX;  // the period along X axis
+    (HEIGHT / SPEED)::second => static dur TY;  // the period along X axis
 
     // color
     @(242., 169., 143.) / 255. * 3 => static vec3 COLOR_ICONBG_ACTIVE;

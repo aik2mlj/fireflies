@@ -1,9 +1,14 @@
+@import "constant.ck"
 @import "mouse.ck"
-@import "play.ck"
+// @import "play.ck"
 
 // Various object class for painting ==========================================
 
 public class Shape extends GGen {
+    fun void play() {
+        // start playing when the shape is created
+    }
+
     fun void stop() {
         // stop playing, useful when erasing shapes
     }
@@ -36,7 +41,9 @@ public class Line extends Shape {
     float cos, sin;
     float length;
     float slope;
-    LinePlay play;
+
+    FrencHrn a => NRev rev => Pan2 pan => dac;
+    0.1 => rev.mix;
 
     fun Line(vec2 start, vec2 end, vec3 color, float width, float depth) {
         start => this.start;
@@ -48,14 +55,9 @@ public class Line extends Shape {
         dd.y / length => this.sin;
 
         width => g.width;
-        color => g.color;
-        play.setColor(color);
+        this.color(color);
         g.positions([start, end]);
         depth => this.posZ;
-    }
-
-    fun void stop() {
-        play.stop();
     }
 
     fun void updatePos(vec2 start, vec2 end) {
@@ -68,7 +70,12 @@ public class Line extends Shape {
 
     fun void color(vec3 c) {
         g.color(c);
-        play.setColor(c);
+
+        Color.rgb2hsv(c) => vec3 hsv;
+        // map value(brightness) to pitch
+        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 100)) => a.freq;
+        // map saturation to loudness
+        Math.map2(hsv.y, 0., 1., .1, 0.7) => a.gain;
     }
 
     fun float width() {
@@ -97,21 +104,28 @@ public class Line extends Shape {
         return (0 <= x_prime && x_prime <= length && -width() / 2. <= y_prime && y_prime <= width() / 2.);
     }
 
-    fun int touchX(float x) {
-        if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
-            // calculate the intersection's y
-            getY(x) => float y;
-            play.play(y2pan(y));
-            return true;
-        } else {
-            play.stop();
-            return false;
-        }
+    fun void play() {
+        Math.min(start.x, end.x);
+
+        // sync
+        // C.TX - (now % C.TX) => now;
     }
 
-    fun int touchY(float y) {
-        return (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y));
-    }
+    // fun int touchX(float x) {
+    //     if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
+    //         // calculate the intersection's y
+    //         getY(x) => float y;
+    //         play(y2pan(y));
+    //         return true;
+    //     } else {
+    //         stop();
+    //         return false;
+    //     }
+    // }
+    //
+    // fun int touchY(float y) {
+    //     return (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y));
+    // }
 }
 
 public class Circle extends Shape {
@@ -121,18 +135,21 @@ public class Circle extends Shape {
     CircleGeometry geo(.5, 96, 0., 2 * Math.pi);
     g.geo(geo);
 
-    CirclePlay play;
-
     vec2 center;
     float r;
+
+    PercFlut a => Pan2 pan;
+    NRev rev[2];
+    for (int ch; ch < 2; ++ch)
+        pan.chan(ch) => rev[ch] => dac.chan(ch);
+    0.2 => rev[0].mix => rev[1].mix;
 
     fun Circle(vec2 center, float r, vec3 color, float depth) {
         center => this.center;
         r => this.r;
         @(center.x, center.y, depth) => this.pos;
         r * 2. => this.sca;
-        color => mat.color;
-        play.setColor(color);
+        this.color(color);
     }
 
     fun vec3 color() {
@@ -141,11 +158,12 @@ public class Circle extends Shape {
 
     fun void color(vec3 c) {
         mat.color(c);
-        play.setColor(c);
-    }
 
-    fun void stop() {
-        play.stop();
+        Color.rgb2hsv(c) => vec3 hsv;
+        // map value(brightness) to pitch
+        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 50)) => a.freq;
+        // map saturation to loudness
+        Math.map2(hsv.y, 0., 1., .1, 1.2) => a.gain;
     }
 
     fun int isHovered(Mouse @ mouse) {
@@ -153,21 +171,24 @@ public class Circle extends Shape {
         return dd.x * dd.x + dd.y * dd.y <= r * r;
     }
 
-    fun int touchX(float x) {
-        if (x >= center.x - r && x <= center.x + r) {
-            // calculate chord length
-            Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
-            play.play(y2pan(center.y), amount);
-            return true;
-        } else {
-            play.stop();
-            return false;
-        }
+    fun void play() {
     }
 
-    fun int touchY(float y) {
-        return (y >= center.y - r && y <= center.y + r);
-    }
+    // fun int touchX(float x) {
+    //     if (x >= center.x - r && x <= center.x + r) {
+    //         // calculate chord length
+    //         Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
+    //         play(y2pan(center.y), amount);
+    //         return true;
+    //     } else {
+    //         stop();
+    //         return false;
+    //     }
+    // }
+    //
+    // fun int touchY(float y) {
+    //     return (y >= center.y - r && y <= center.y + r);
+    // }
 }
 
 public class Plane extends Shape {
@@ -176,7 +197,8 @@ public class Plane extends Shape {
     vec2 start, end;
     g.mat(mat);
 
-    PlanePlay play;
+    HevyMetl a => NRev rev => Pan2 pan => dac;
+    0.1 => rev.mix;
 
     fun Plane(vec2 pos, float scale, vec3 color, float depth) {
         // might be useless, only square
@@ -184,7 +206,7 @@ public class Plane extends Shape {
         scale => this.sca;
         @(pos.x - scale / 2., pos.y - scale / 2.) => this.start;
         @(pos.x + scale / 2., pos.y + scale / 2.) => this.end;
-        color => mat.color;
+        this.color(color);
     }
 
     fun Plane(vec2 start, vec2 end, vec3 color, float depth) {
@@ -195,11 +217,7 @@ public class Plane extends Shape {
         @(pos.x, pos.y, depth) => this.pos;
         Math.fabs((start - end).x) => this.scaX;
         Math.fabs((start - end).y) => this.scaY;
-        color => mat.color;
-    }
-
-    fun void stop() {
-        play.stop();
+        this.color(color);
     }
 
     fun vec3 color() {
@@ -208,6 +226,12 @@ public class Plane extends Shape {
 
     fun void color(vec3 c) {
         mat.color(c);
+
+        Color.rgb2hsv(c) => vec3 hsv;
+        // map value(brightness) to pitch
+        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 100)) => a.freq;
+        // map saturation to loudness
+        Math.map2(hsv.y, 0., 1., .1, 0.7) => a.gain;
     }
 
     fun int isHovered(Mouse @ mouse) {
@@ -217,17 +241,21 @@ public class Plane extends Shape {
                 mouse.pos.y > pos().y - halfHeight && mouse.pos.y < pos().y + halfHeight);
     }
 
-    fun int touchX(float x) {
-        if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
-            play.play(y2pan(this.posY()), this.scaY());
-            return true;
-        } else {
-            play.stop();
-            return false;
-        }
+    fun void play() {
     }
 
-    fun int touchY(float y) {
-        return false;
-    }
+    // fun int touchX(float x) {
+    //     if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
+    //         play(y2pan(this.posY()), this.scaY());
+    //         return true;
+    //     } else {
+    //         stop();
+    //         return false;
+    //     }
+    // }
+    //
+    // fun int touchY(float y) {
+    //     return false;
+    // }
 }
+
