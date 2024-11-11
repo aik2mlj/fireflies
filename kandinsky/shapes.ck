@@ -4,8 +4,6 @@
 // Various object class for painting ==========================================
 
 public class Shape extends GGen {
-    Const con;
-
     fun void stop() {
         // stop playing, useful when erasing shapes
     }

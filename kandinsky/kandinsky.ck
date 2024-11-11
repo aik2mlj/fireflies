@@ -7,6 +7,9 @@
 //-----------------------------------------------------------------------------
 @import "shapes.ck"
 
+// mitigate the weird bug that static values only become valid after class instantiation
+Const _con;
+
 // Initialize Mouse Manager ===================================================
 Mouse mouse;
 spork ~ mouse.selfUpdate(); // start updating mouse position
@@ -32,7 +35,7 @@ output_pass.input(bloom_pass.colorOutput());
 16.0 / 9.0 => float ASPECT;
 cam.viewSize() => float HEIGHT;
 cam.viewSize() * ASPECT => float WIDTH;
-<<< HEIGHT, WIDTH >>>;
+// <<< HEIGHT, WIDTH >>>;
 
 -WIDTH / 2 => float LEFT;
 WIDTH / 2 => float RIGHT;
@@ -456,7 +459,7 @@ class PlayLine extends GGen {
     fun play(DrawEvent @ drawEvent) {
         while (true) {
             GG.nextFrame() => now;
-            GG.dt() * 2 => float t;
+            GG.dt() * Const.SPEED => float t;
             t => line.translateX;
 
             if (line.posX() > WIDTH) {

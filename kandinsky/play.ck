@@ -1,7 +1,6 @@
 @import "constant.ck"
 
 class Play {
-    Const con;
     0 => static int NONE;  // not played
     1 => static int ACTIVE;   // playing
     0 => int state;
