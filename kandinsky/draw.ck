@@ -38,7 +38,7 @@ public class ColorPicker extends GGen {
         d @=> this.drawEvent;
 
         C.TOOLBAR_SIZE => g.sca;
-        @(0, C.DOWN+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => g.pos;
+        @(0, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => g.pos;
         nextColor();
     }
 
@@ -102,7 +102,7 @@ public class Draw extends GGen {
 
     fun int isHoveredToolbar() {
         // if the mouse is hovered on toolbar
-        return mouse.pos.y < C.DOWN + C.TOOLBAR_SIZE + C.TOOLBAR_PADDING;
+        return mouse.pos.y < C.DOWN;
     }
 
     fun void waitActivate() {
@@ -156,10 +156,10 @@ public class LineDraw extends Draw {
 
         0.03 => icon.width;
         C.COLOR_ICON => icon.color;
-        [@(icon_offset-(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN+C.TOOLBAR_PADDING),
-            @(icon_offset+(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN+C.TOOLBAR_SIZE)] => icon.positions;
+        [@(icon_offset-(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN_GLB+C.TOOLBAR_PADDING),
+            @(icon_offset+(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN_GLB+C.TOOLBAR_SIZE)] => icon.positions;
 
-        @(icon_offset, C.DOWN+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
+        @(icon_offset, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
     fun Shape@ createShape(vec2 start, vec2 end) {
@@ -177,10 +177,10 @@ public class CircleDraw extends Draw {
         Draw(m, d);
 
         C.COLOR_ICON => icon.color;
-        @(icon_offset, C.DOWN+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, 0) => icon.pos;
+        @(icon_offset, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, 0) => icon.pos;
         C.TOOLBAR_SIZE - C.TOOLBAR_PADDING => icon.sca;
 
-        @(icon_offset, C.DOWN+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
+        @(icon_offset, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
     fun Shape@ createShape(vec2 start, vec2 end) {
@@ -200,10 +200,10 @@ public class PlaneDraw extends Draw {
         Draw(m, d);
 
         C.COLOR_ICON => icon.color;
-        @(icon_offset, C.DOWN+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, 0) => icon.pos;
+        @(icon_offset, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, 0) => icon.pos;
         C.TOOLBAR_SIZE - C.TOOLBAR_PADDING => icon.sca;
 
-        @(icon_offset, C.DOWN+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
+        @(icon_offset, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
     fun Shape@ createShape(vec2 start, vec2 end) {
@@ -224,12 +224,12 @@ public class Eraser extends Draw {
         0.08 => icon_1.width;
         C.COLOR_ICON => icon_0.color;
         C.COLOR_ICON => icon_1.color;
-        [@(icon_offset-(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN+C.TOOLBAR_PADDING),
-            @(icon_offset+(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN+C.TOOLBAR_SIZE)] => icon_0.positions;
-        [@(icon_offset-(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN+C.TOOLBAR_SIZE),
-            @(icon_offset+(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN+C.TOOLBAR_PADDING)] => icon_1.positions;
+        [@(icon_offset-(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN_GLB+C.TOOLBAR_PADDING),
+            @(icon_offset+(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN_GLB+C.TOOLBAR_SIZE)] => icon_0.positions;
+        [@(icon_offset-(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN_GLB+C.TOOLBAR_SIZE),
+            @(icon_offset+(C.TOOLBAR_SIZE-C.TOOLBAR_PADDING)/2, C.DOWN_GLB+C.TOOLBAR_PADDING)] => icon_1.positions;
 
-        @(icon_offset, C.DOWN+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
+        @(icon_offset, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => icon_bg.pos;
     }
 
     fun void draw() {

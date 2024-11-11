@@ -35,7 +35,7 @@ output_pass.input(bloom_pass.colorOutput());
 // white background
 TPlane background --> scene;
 C.WIDTH => background.scaX;
-C.HEIGHT => background.scaY;
+C.HEIGHT_GLB => background.scaY;
 -90 => background.posZ;
 @(1., 1., 1.) * 5 => background.color;
 
