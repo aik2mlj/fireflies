@@ -8,20 +8,26 @@ public class Shape extends GGen {
         // stop playing, useful when erasing shapes
     }
 
-    fun int touchX(float x) {
+    fun int touchX(float x, float speed) {
         return false;
     }
 
-    fun int touchY(float y) {
+    fun int touchY(float y, float speed) {
         return false;
     }
 
-    fun float x2pan(float x) {
-        return Math.map2(x, C.LEFT, C.RIGHT, -1., 1.);
+    fun float x2pan(float x, float speed) {
+        if (speed > 0)
+            return Math.map2(x, C.LEFT, C.RIGHT, -1., 1.);
+        else
+            return Math.map2(x, C.LEFT, C.RIGHT, 1., -1.);
     }
 
-    fun float y2pan(float y) {
-        return Math.map2(y, C.UP, C.DOWN, -1., 1.);
+    fun float y2pan(float y, float speed) {
+        if (speed > 0)
+            return Math.map2(y, C.UP, C.DOWN, -1., 1.);
+        else
+            return Math.map2(y, C.UP, C.DOWN, 1., -1.);
         // TODO: specify play direction
     }
 
@@ -97,11 +103,11 @@ public class Line extends Shape {
         return (0 <= x_prime && x_prime <= length && -width() / 2. <= y_prime && y_prime <= width() / 2.);
     }
 
-    fun int touchX(float x) {
+    fun int touchX(float x, float speed) {
         if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
             // calculate the intersection's y
             getY(x) => float y;
-            play.play(y2pan(y));
+            play.play(y2pan(y, speed));
             return true;
         } else {
             play.stop();
@@ -109,7 +115,7 @@ public class Line extends Shape {
         }
     }
 
-    fun int touchY(float y) {
+    fun int touchY(float y, float speed) {
         return (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y));
     }
 }
@@ -153,11 +159,11 @@ public class Circle extends Shape {
         return dd.x * dd.x + dd.y * dd.y <= r * r;
     }
 
-    fun int touchX(float x) {
+    fun int touchX(float x, float speed) {
         if (x >= center.x - r && x <= center.x + r) {
             // calculate chord length
             Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
-            play.play(y2pan(center.y), amount);
+            play.play(y2pan(center.y, speed), amount);
             return true;
         } else {
             play.stop();
@@ -165,7 +171,7 @@ public class Circle extends Shape {
         }
     }
 
-    fun int touchY(float y) {
+    fun int touchY(float y, float speed) {
         return (y >= center.y - r && y <= center.y + r);
     }
 }
@@ -217,9 +223,9 @@ public class Plane extends Shape {
                 mouse.pos.y > pos().y - halfHeight && mouse.pos.y < pos().y + halfHeight);
     }
 
-    fun int touchX(float x) {
+    fun int touchX(float x, float speed) {
         if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
-            play.play(y2pan(this.posY()), this.scaY());
+            play.play(y2pan(this.posY(), speed), this.scaY());
             return true;
         } else {
             play.stop();
@@ -227,7 +233,7 @@ public class Plane extends Shape {
         }
     }
 
-    fun int touchY(float y) {
+    fun int touchY(float y, float speed) {
         return false;
     }
 }

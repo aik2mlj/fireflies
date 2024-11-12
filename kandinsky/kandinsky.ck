@@ -55,8 +55,8 @@ spork ~ select_drawtool(mouse, draws, drawEvent);
 ColorPicker colorPicker(mouse, drawEvent) --> scene;
 spork ~ colorPicker.pick();
 
-PlayLine playline --> scene;
-spork ~ playline.play(drawEvent);
+PlayLine playline(mouse, drawEvent) --> scene;
+spork ~ playline.play();
 
 
 fun void select_drawtool(Mouse @ m, Draw draws[], DrawEvent @ drawEvent) {

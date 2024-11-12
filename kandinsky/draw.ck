@@ -302,19 +302,19 @@ public class DrawEvent extends Event {
         depth + 0.001 => depth;
     }
 
-    fun int touchX(float x) {
+    fun int touchX(float x, float speed) {
         false => int touched;
         for (int i; i < length; ++i) {
-            shapes[i].touchX(x) => int tmp;
+            shapes[i].touchX(x, speed) => int tmp;
             touched || tmp => touched;
         }
         return touched;
     }
 
-    fun int touchY(float y) {
+    fun int touchY(float y, float speed) {
         false => int touched;
         for (int i; i < length; ++i) {
-            shapes[i].touchY(y) => int tmp;
+            shapes[i].touchY(y, speed) => int tmp;
             touched || tmp => touched;
         }
         return touched;
@@ -330,9 +330,23 @@ public class PlayLine extends GGen {
     // place line
     line.positions([@(C.LEFT, C.DOWN), @(C.LEFT, C.UP)]);
 
-    fun play(DrawEvent @ drawEvent) {
+    Mouse @ mouse;
+    DrawEvent @ drawEvent;
+
+    fun PlayLine(Mouse @ m, DrawEvent @ d) {
+        m @=> mouse;
+        d @=> drawEvent;
+    }
+
+    fun play() {
         while (true) {
             GG.nextFrame() => now;
+
+            if (drawEvent.isNone() && GWindow.mouseLeftDown() && mouse.pos.y >= C.DOWN) {
+                // drawing not activated, can change playline position by left click
+                mouse.pos.x + C.WIDTH / 2 => line.posX;
+            }
+
             GWindow.scrollY() * 0.5 +=> speed;
             GG.dt() * speed => float t;
             t => line.translateX;
@@ -344,7 +358,7 @@ public class PlayLine extends GGen {
 
             line.posX() - C.WIDTH / 2 => float x;
 
-            drawEvent.touchX(x);
+            drawEvent.touchX(x, speed);
         }
     }
 }
