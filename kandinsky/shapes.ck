@@ -203,7 +203,9 @@ public class Circle extends Shape {
             // calculate chord length
             if (play.state == 0)
                 spork ~ animate(speed) @=> animateShred;
-            Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
+            // Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
+            // fix stuttering
+            (r - Math.fabs(x - center.x)) * 2 => float amount;
             play.play(y2pan(center.y, speed), amount);
             return true;
         } else {
