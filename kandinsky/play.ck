@@ -44,7 +44,9 @@ public class LinePlay extends Play {
 }
 
 public class CirclePlay extends Play {
-    SinOsc a => NRev rev => Pan2 pan => dac;
+    SinOsc m => SinOsc a => NRev rev => Pan2 pan => dac;
+    2 => a.sync;  // FM synth
+
     0.1 => rev.mix;
     0 => a.gain;
     // NRev rev[2];
@@ -56,6 +58,7 @@ public class CirclePlay extends Play {
         Color.rgb2hsv(color) => vec3 hsv;
         // map value(brightness) to pitch
         Std.mtof(Math.map2(hsv.z, 0., 1., 30-12, 100-12)) => a.freq;
+        a.freq() / 1.618 => m.freq;
         // map saturation to loudness
         // Math.map2(hsv.y, 0., 1., .1, 1.2) => a.gain;
     }
@@ -64,6 +67,8 @@ public class CirclePlay extends Play {
         // <<< "play" >>>;
         // map pan
         p => pan.pan;
+        // map chord length to loudness
+        Math.map2(amount, 0., C.HEIGHT, 0., 1000) => m.gain;
         // map chord length to loudness
         Math.map2(amount, 0., C.HEIGHT, 0., 1.) => a.gain;
 
