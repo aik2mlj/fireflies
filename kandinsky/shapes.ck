@@ -19,17 +19,17 @@ public class Shape extends GGen {
     }
 
     fun float x2pan(float x, float speed) {
-        if (speed > 0)
-            return Math.map2(x, C.LEFT, C.RIGHT, -1., 1.);
-        else
-            return Math.map2(x, C.LEFT, C.RIGHT, 1., -1.);
+        // if (speed > 0)
+        return Math.map2(x, C.LEFT, C.RIGHT, -1., 1.);
+        // else
+        //     return Math.map2(x, C.LEFT, C.RIGHT, 1., -1.);
     }
 
     fun float y2pan(float y, float speed) {
-        if (speed > 0)
-            return Math.map2(y, C.UP, C.DOWN, -1., 1.);
-        else
-            return Math.map2(y, C.UP, C.DOWN, 1., -1.);
+        // if (speed > 0)
+        return Math.map2(y, C.UP, C.DOWN, -1., 1.);
+        // else
+        //     return Math.map2(y, C.UP, C.DOWN, 1., -1.);
         // TODO: specify play direction
     }
 
@@ -137,7 +137,17 @@ public class Line extends Shape {
     }
 
     fun int touchY(float y, float speed) {
-        return (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y));
+        if (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y)) {
+            // calculate the intersection's x
+            getX(y) => float x;
+            if (play.state == 0)
+                spork ~ animate(speed) @=> animateShred;
+            play.play(x2pan(x, speed));
+            return true;
+        } else {
+            stop();
+            return false;
+        }
     }
 }
 
@@ -200,13 +210,12 @@ public class Circle extends Shape {
 
     fun int touchX(float x, float speed) {
         if (x >= center.x - r && x <= center.x + r) {
-            // calculate chord length
             if (play.state == 0)
                 spork ~ animate(speed) @=> animateShred;
             // Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
             // fix stuttering
             (r - Math.fabs(x - center.x)) * 2 => float amount;
-            play.play(y2pan(center.y, speed), amount);
+            play.play(y2pan(center.y, speed), amount/C.HEIGHT);
             return true;
         } else {
             stop();
@@ -215,7 +224,18 @@ public class Circle extends Shape {
     }
 
     fun int touchY(float y, float speed) {
-        return (y >= center.y - r && y <= center.y + r);
+        if (y >= center.y - r && y <= center.y + r) {
+            if (play.state == 0)
+                spork ~ animate(speed) @=> animateShred;
+            // Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
+            // fix stuttering
+            (r - Math.fabs(y - center.y)) * 2 => float amount;
+            play.play(x2pan(center.x, speed), amount/C.HEIGHT);
+            return true;
+        } else {
+            stop();
+            return false;
+        }
     }
 }
 
@@ -293,7 +313,7 @@ public class Plane extends Shape {
         if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
             if (play.state == 0)
                 spork ~ animate(speed) @=> animateShred;
-            play.play(y2pan(this.posY(), speed), this.scaY());
+            play.play(y2pan(this.posY(), speed), this.scaY()/C.HEIGHT);
             return true;
         } else {
             stop();
@@ -302,6 +322,14 @@ public class Plane extends Shape {
     }
 
     fun int touchY(float y, float speed) {
-        return false;
+        if (y >= Math.min(start.y, end.y) && y <= Math.max(start.y, end.y)) {
+            if (play.state == 0)
+                spork ~ animate(speed) @=> animateShred;
+            play.play(x2pan(this.posX(), speed), this.scaX()/C.HEIGHT);
+            return true;
+        } else {
+            stop();
+            return false;
+        }
     }
 }

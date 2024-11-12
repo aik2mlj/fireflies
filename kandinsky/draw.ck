@@ -326,10 +326,12 @@ public class PlayLine extends GGen {
     GLines line --> this;
     @(0, 0, 0) => line.color;
     0.01 => line.width;
+    line.positions([@(C.LEFT, C.DOWN), @(C.LEFT, C.UP)]);
     2 => float speed;
 
-    // place line
-    line.positions([@(C.LEFT, C.DOWN), @(C.LEFT, C.UP)]);
+    0 => static int X_AXIS;
+    1 => static int Y_AXIS;
+    0 => int axis;
 
     Mouse @ mouse;
     DrawEvent @ drawEvent;
@@ -339,27 +341,65 @@ public class PlayLine extends GGen {
         d @=> drawEvent;
     }
 
+    fun int isHoveredToolbar() {
+        // if the mouse is hovered on toolbar
+        return mouse.pos.y < C.DOWN;
+    }
+
     fun play() {
         while (true) {
             GG.nextFrame() => now;
 
-            if (drawEvent.isNone() && GWindow.mouseLeftDown() && mouse.pos.y >= C.DOWN) {
-                // drawing not activated, can change playline position by left click
-                mouse.pos.x + C.WIDTH / 2 => line.posX;
-            }
-
+            // use mouse wheels to change speed!
             GWindow.scrollY() * 0.5 +=> speed;
             GG.dt() * speed => float t;
-            t => line.translateX;
 
-            if (line.posX() > C.WIDTH)
-                0 => line.posX;
-            else if (line.posX() < 0)
-                C.WIDTH => line.posX;
+            if (drawEvent.isNone() && GWindow.mouseLeftDown() && !isHoveredToolbar()) {
+                // drawing not activated, can change playline position by left click
+                if (axis == X_AXIS)
+                    mouse.pos.x + C.WIDTH / 2 => line.posX;
+                else
+                    mouse.pos.y + C.HEIGHT - C.HEIGHT_GLB / 2 => line.posY;
+            }
 
-            line.posX() - C.WIDTH / 2 => float x;
+            if (GWindow.mouseRightDown()) {
+                // right click to switch the sweeping axis!
+                if (axis == X_AXIS) {
+                    // switching to Y axis
+                    0 => line.posX;
+                    line.positions([@(C.LEFT, C.DOWN), @(C.RIGHT, C.DOWN)]);
+                } else {
+                    // switching to X axis
+                    0 => line.posY;
+                    line.positions([@(C.LEFT, C.DOWN), @(C.LEFT, C.UP)]);
+                }
+                !axis => axis;
+            }
 
-            drawEvent.touchX(x, speed);
+            if (axis == X_AXIS) {
+                t => line.translateX;
+
+                if (line.posX() > C.WIDTH)
+                    0 => line.posX;
+                else if (line.posX() < 0)
+                    C.WIDTH => line.posX;
+
+                line.posX() - C.WIDTH / 2 => float x;
+
+                drawEvent.touchX(x, speed);
+            } else {
+                t => line.translateY;
+
+                if (line.posY() > C.HEIGHT)
+                    0 => line.posY;
+                else if (line.posY() < 0)
+                    C.HEIGHT => line.posY;
+
+                line.posY() + C.HEIGHT_GLB / 2 - C.HEIGHT => float y;
+
+                drawEvent.touchY(y, speed);
+            }
+
         }
     }
 }
