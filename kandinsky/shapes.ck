@@ -236,6 +236,7 @@ public class Plane extends Shape {
         @(pos.x - scale / 2., pos.y - scale / 2.) => this.start;
         @(pos.x + scale / 2., pos.y + scale / 2.) => this.end;
         color => color0 => mat.color;
+        play.setColor(color);
     }
 
     fun Plane(vec2 start, vec2 end, vec3 color, float depth) {
@@ -248,6 +249,7 @@ public class Plane extends Shape {
         Math.fabs((start - end).y) => this.scaY;
         this.sca() => sca0;
         color => color0 => mat.color;
+        play.setColor(color);
     }
 
     fun void stop() {
@@ -264,6 +266,7 @@ public class Plane extends Shape {
 
     fun void color(vec3 c) {
         mat.color(c);
+        play.setColor(c);
     }
 
     fun int isHovered(Mouse @ mouse) {
