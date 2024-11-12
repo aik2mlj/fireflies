@@ -325,6 +325,7 @@ public class PlayLine extends GGen {
     GLines line --> this;
     @(0, 0, 0) => line.color;
     0.01 => line.width;
+    2 => float speed;
 
     // place line
     line.positions([@(C.LEFT, C.DOWN), @(C.LEFT, C.UP)]);
@@ -332,12 +333,14 @@ public class PlayLine extends GGen {
     fun play(DrawEvent @ drawEvent) {
         while (true) {
             GG.nextFrame() => now;
-            GG.dt() * C.SPEED => float t;
+            GWindow.scrollY() * 0.5 +=> speed;
+            GG.dt() * speed => float t;
             t => line.translateX;
 
-            if (line.posX() > C.WIDTH) {
+            if (line.posX() > C.WIDTH)
                 0 => line.posX;
-            }
+            else if (line.posX() < 0)
+                C.WIDTH => line.posX;
 
             line.posX() - C.WIDTH / 2 => float x;
 

@@ -7,9 +7,6 @@ public class C {
     -HEIGHT_GLB / 2 => static float DOWN_GLB;  // global bottom
     HEIGHT_GLB / 2 => static float UP;
 
-    // playback speed
-    2 => static float SPEED;
-
     // toolbar
     0.4 => static float TOOLBAR_SIZE;
     0.1 => static float TOOLBAR_PADDING;
