@@ -4,6 +4,8 @@
 // Various object class for painting ==========================================
 
 public class Shape extends GGen {
+    Shred @ animateShred;
+
     fun void stop() {
         // stop playing, useful when erasing shapes
     }
@@ -42,6 +44,8 @@ public class Line extends Shape {
     float cos, sin;
     float length;
     float slope;
+    float width0;
+    vec3 color0;
     LinePlay play;
 
     fun Line(vec2 start, vec2 end, vec3 color, float width, float depth) {
@@ -53,8 +57,8 @@ public class Line extends Shape {
         dd.x / length => this.cos;
         dd.y / length => this.sin;
 
-        width => g.width;
-        color => g.color;
+        width => width0 => g.width;
+        color => color0 => g.color;
         play.setColor(color);
         g.positions([start, end]);
         depth => this.posZ;
@@ -62,6 +66,10 @@ public class Line extends Shape {
 
     fun void stop() {
         play.stop();
+        width0 => this.width;
+        color0 => this.color;
+        if (animateShred != null)
+            animateShred.exit();
     }
 
     fun void updatePos(vec2 start, vec2 end) {
@@ -103,14 +111,27 @@ public class Line extends Shape {
         return (0 <= x_prime && x_prime <= length && -width() / 2. <= y_prime && y_prime <= width() / 2.);
     }
 
+    fun void animate(float speed) {
+        now => time t0;
+        while (true) {
+            GG.nextFrame() => now;
+            (now - t0) / 1::second => float t;
+            Math.sin(t * speed * 5) => float inc;
+            width0 + inc*0.02 => this.width;
+            // @(color0.x+inc*0.1, color0.y+inc*0.1, color0.z+inc*0.1) => this.color;
+        }
+    }
+
     fun int touchX(float x, float speed) {
         if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
             // calculate the intersection's y
             getY(x) => float y;
+            if (play.state == 0)
+                spork ~ animate(speed) @=> animateShred;
             play.play(y2pan(y, speed));
             return true;
         } else {
-            play.stop();
+            stop();
             return false;
         }
     }
@@ -132,12 +153,15 @@ public class Circle extends Shape {
     vec2 center;
     float r;
 
+    float sca0;
+    vec3 color0;
+
     fun Circle(vec2 center, float r, vec3 color, float depth) {
         center => this.center;
         r => this.r;
         @(center.x, center.y, depth) => this.pos;
-        r * 2. => this.sca;
-        color => mat.color;
+        r * 2. => sca0 => this.sca;
+        color => color0 => mat.color;
         play.setColor(color);
     }
 
@@ -152,6 +176,10 @@ public class Circle extends Shape {
 
     fun void stop() {
         play.stop();
+        sca0 => this.sca;
+        color0 => this.color;
+        if (animateShred != null)
+            animateShred.exit();
     }
 
     fun int isHovered(Mouse @ mouse) {
@@ -159,14 +187,27 @@ public class Circle extends Shape {
         return dd.x * dd.x + dd.y * dd.y <= r * r;
     }
 
+    fun void animate(float speed) {
+        now => time t0;
+        while (true) {
+            GG.nextFrame() => now;
+            (now - t0) / 1::second => float t;
+            Math.sin(t * speed * 5) => float inc;
+            sca0+inc*0.03 => this.sca;
+            // @(color0.x+inc*0.1, color0.y+inc*0.1, color0.z+inc*0.1) => this.color;
+        }
+    }
+
     fun int touchX(float x, float speed) {
         if (x >= center.x - r && x <= center.x + r) {
             // calculate chord length
+            if (play.state == 0)
+                spork ~ animate(speed) @=> animateShred;
             Math.sqrt(r * r - (x - center.x) * (x - center.x)) => float amount;
             play.play(y2pan(center.y, speed), amount);
             return true;
         } else {
-            play.stop();
+            stop();
             return false;
         }
     }
@@ -184,13 +225,17 @@ public class Plane extends Shape {
 
     PlanePlay play;
 
+    vec3 sca0;
+    vec3 color0;
+
     fun Plane(vec2 pos, float scale, vec3 color, float depth) {
         // might be useless, only square
         @(pos.x, pos.y, depth) => this.pos;
         scale => this.sca;
+        this.sca() => sca0;
         @(pos.x - scale / 2., pos.y - scale / 2.) => this.start;
         @(pos.x + scale / 2., pos.y + scale / 2.) => this.end;
-        color => mat.color;
+        color => color0 => mat.color;
     }
 
     fun Plane(vec2 start, vec2 end, vec3 color, float depth) {
@@ -201,11 +246,16 @@ public class Plane extends Shape {
         @(pos.x, pos.y, depth) => this.pos;
         Math.fabs((start - end).x) => this.scaX;
         Math.fabs((start - end).y) => this.scaY;
-        color => mat.color;
+        this.sca() => sca0;
+        color => color0 => mat.color;
     }
 
     fun void stop() {
         play.stop();
+        sca0 => this.sca;
+        color0 => this.color;
+        if (animateShred != null)
+            animateShred.exit();
     }
 
     fun vec3 color() {
@@ -223,12 +273,25 @@ public class Plane extends Shape {
                 mouse.pos.y > pos().y - halfHeight && mouse.pos.y < pos().y + halfHeight);
     }
 
+    fun void animate(float speed) {
+        now => time t0;
+        while (true) {
+            GG.nextFrame() => now;
+            (now - t0) / 1::second => float t;
+            Math.sin(t * speed * 5) => float inc;
+            @(sca0.x+inc*0.03, sca0.y+inc*0.03, sca0.z+inc*0.03) => this.sca;
+            // @(color0.x+inc*0.1, color0.y+inc*0.1, color0.z+inc*0.1) => this.color;
+        }
+    }
+
     fun int touchX(float x, float speed) {
         if (x >= Math.min(start.x, end.x) && x <= Math.max(start.x, end.x)) {
+            if (play.state == 0)
+                spork ~ animate(speed) @=> animateShred;
             play.play(y2pan(this.posY(), speed), this.scaY());
             return true;
         } else {
-            play.stop();
+            stop();
             return false;
         }
     }
