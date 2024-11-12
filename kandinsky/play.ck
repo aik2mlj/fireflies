@@ -44,18 +44,20 @@ public class LinePlay extends Play {
 }
 
 public class CirclePlay extends Play {
-    PercFlut a => Pan2 pan;
-    NRev rev[2];
-    for (int ch; ch < 2; ++ch)
-        pan.chan(ch) => rev[ch] => dac.chan(ch);
-    0.2 => rev[0].mix => rev[1].mix;
+    SinOsc a => NRev rev => Pan2 pan => dac;
+    0.1 => rev.mix;
+    0 => a.gain;
+    // NRev rev[2];
+    // for (int ch; ch < 2; ++ch)
+    //     pan.chan(ch) => rev[ch] => dac.chan(ch);
+    // 0.2 => rev[0].mix => rev[1].mix;
 
     fun setColor(vec3 color) {
         Color.rgb2hsv(color) => vec3 hsv;
         // map value(brightness) to pitch
-        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 50)) => a.freq;
+        Std.mtof(Math.map2(hsv.z, 0., 1., 30-12, 100-12)) => a.freq;
         // map saturation to loudness
-        Math.map2(hsv.y, 0., 1., .1, 1.2) => a.gain;
+        // Math.map2(hsv.y, 0., 1., .1, 1.2) => a.gain;
     }
 
     fun void play(float p, float amount) {
@@ -63,11 +65,11 @@ public class CirclePlay extends Play {
         // map pan
         p => pan.pan;
         // map chord length to loudness
-        Math.map2(amount, 0., C.HEIGHT, 0., 7.) => a.gain;
+        Math.map2(amount, 0., C.HEIGHT, 0., 1.) => a.gain;
 
         if (state == NONE) {
             ACTIVE => state;
-            1 => a.noteOn;
+            // 1 => a.noteOn;
         }
     }
 
@@ -75,21 +77,23 @@ public class CirclePlay extends Play {
         // <<< "stop" >>>;
         if (state == ACTIVE) {
             NONE => state;
-            1 => a.noteOff;
+            0 => a.gain;
+            // 1 => a.noteOff;
         }
     }
 }
 
 public class PlanePlay extends Play {
-    HevyMetl a => NRev rev => Pan2 pan => dac;
+    SqrOsc a => NRev rev => Pan2 pan => dac;
+    0 => a.gain;
     0.1 => rev.mix;
 
     fun setColor(vec3 color) {
         Color.rgb2hsv(color) => vec3 hsv;
         // map value(brightness) to pitch
-        Std.mtof(Math.map2(hsv.z, 0., 1., 30, 50)) => a.freq;
+        Std.mtof(Math.map2(hsv.z, 0., 1., 30-12, 100-12)) => a.freq;
         // map saturation to loudness
-        Math.map2(hsv.y, 0., 1., .1, 0.7) => a.gain;
+        // Math.map2(hsv.y, 0., 1., .1, 0.7) => a.gain;
     }
 
     fun void play(float p, float amount) {
@@ -97,11 +101,11 @@ public class PlanePlay extends Play {
         // map pan
         p => pan.pan;
         // map length to loudness
-        Math.map2(amount, 0., C.HEIGHT, 0., 5.) => a.gain;
+        Math.map2(amount, 0., C.HEIGHT, 0., 1.) => a.gain;
 
         if (state == NONE) {
             ACTIVE => state;
-            1 => a.noteOn;
+            // 1 => a.noteOn;
         }
     }
 
@@ -109,7 +113,8 @@ public class PlanePlay extends Play {
         // <<< "stop" >>>;
         if (state == ACTIVE) {
             NONE => state;
-            1 => a.noteOff;
+            0 => a.gain;
+            // 1 => a.noteOff;
         }
     }
 }
