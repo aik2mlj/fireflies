@@ -17,11 +17,11 @@ public class Shape extends GGen {
     }
 
     fun float x2pan(float x) {
-        return x / C.WIDTH;
+        return Math.map2(x, C.LEFT, C.RIGHT, -1., 1.);
     }
 
     fun float y2pan(float y) {
-        return -y / C.HEIGHT;
+        return Math.map2(y, C.UP, C.DOWN, -1., 1.);
         // TODO: specify play direction
     }
 
