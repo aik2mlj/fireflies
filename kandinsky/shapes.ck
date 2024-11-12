@@ -5,12 +5,18 @@
 // Various object class for painting ==========================================
 
 public class Shape extends GGen {
+    Shred @ playShred;
+
+    fun void _play() {}
+
     fun void play() {
-        // start playing when the shape is created
+        <<< "play sporked" >>>;
+        spork ~ _play() @=> playShred;
     }
 
     fun void stop() {
-        // stop playing, useful when erasing shapes
+        if (playShred != null)
+            playShred.exit();
     }
 
     fun int touchX(float x) {
@@ -26,7 +32,7 @@ public class Shape extends GGen {
     }
 
     fun float y2pan(float y) {
-        return -y / C.HEIGHT;
+        return Math.map2(y, C.UP, C.DOWN, -1., 1.);
         // TODO: specify play direction
     }
 
@@ -43,6 +49,7 @@ public class Line extends Shape {
     float slope;
 
     FrencHrn a => NRev rev => Pan2 pan => dac;
+    0.2 => a.gain;
     0.1 => rev.mix;
 
     fun Line(vec2 start, vec2 end, vec3 color, float width, float depth) {
@@ -104,11 +111,47 @@ public class Line extends Shape {
         return (0 <= x_prime && x_prime <= length && -width() / 2. <= y_prime && y_prime <= width() / 2.);
     }
 
-    fun void play() {
-        Math.min(start.x, end.x);
+    fun void _proceed(dur t) {
+        now => time t0;
+        while (now - t0 < t) {
+            GG.nextFrame() => now;
+        }
+    }
 
-        // sync
-        // C.TX - (now % C.TX) => now;
+    fun void _play() {
+        Math.min(start.x, end.x) => float left;
+        Math.max(start.x, end.x) => float right;
+        (left / C.SPEED) * 1::second + C.TX / 2. => dur left_t;
+        (right / C.SPEED) * 1::second + C.TX / 2. => dur right_t;
+        // current playline time
+        now % C.TX => dur t;
+        if (t > left_t)  // passed, next cycle
+            _proceed(C.TX - t + left_t);
+        else  // this cycle
+            _proceed(left_t - t);
+        while (true) {
+            // TODO: can perhaps be further optimized
+            // now playline touches the left side
+            left => float x;
+            // touching the shape
+            1 => a.noteOn;
+            // <<< "on" >>>;
+            while (left <= x && x < right) {
+                pan.pan(getY(x));
+                GG.nextFrame() => now;
+                (now % C.TX) / 1::second * C.SPEED - C.WIDTH / 2. => x;
+            }
+            // <<< "off" >>>;
+            1 => a.noteOff;
+            // skip to next cycle
+            _proceed(C.TX - right_t + left_t);
+        }
+    }
+
+    fun void stop() {
+        1 => a.noteOff;
+        if (playShred != null)
+            playShred.exit();
     }
 
     // fun int touchX(float x) {
@@ -172,6 +215,12 @@ public class Circle extends Shape {
     }
 
     fun void play() {
+    }
+
+    fun void stop() {
+        1 => a.noteOff;
+        if (playShred != null)
+            playShred.exit();
     }
 
     // fun int touchX(float x) {
@@ -242,6 +291,12 @@ public class Plane extends Shape {
     }
 
     fun void play() {
+    }
+
+    fun void stop() {
+        1 => a.noteOff;
+        if (playShred != null)
+            playShred.exit();
     }
 
     // fun int touchX(float x) {
