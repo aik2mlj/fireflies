@@ -27,6 +27,7 @@ public class ColorPicker extends GGen {
     // color picker
     TPlane g --> this;
     vec3 color;
+    0.5 => float icon_offset;
     // [Color.SKYBLUE, Color.BEIGE, Color.MAGENTA, Color.LIGHTGRAY] @=> vec3 presets[];
     // int idx;
 
@@ -38,7 +39,7 @@ public class ColorPicker extends GGen {
         d @=> this.drawEvent;
 
         C.TOOLBAR_SIZE => g.sca;
-        @(0, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => g.pos;
+        @(icon_offset, C.DOWN_GLB+(C.TOOLBAR_PADDING+C.TOOLBAR_SIZE)/2, -1) => g.pos;
         nextColor();
     }
 
@@ -173,7 +174,7 @@ public class CircleDraw extends Draw {
     GCircle icon --> this;
     FlatMaterial mat;
     icon.mat(mat);
-    0.5 => float icon_offset;
+    0 => float icon_offset;
 
     fun @construct(Mouse @ m, DrawEvent @ d) {
         Draw(m, d);
