@@ -37,6 +37,11 @@
 //     @location(2) v_uv : vec2f,               // Interpolated texture coordinates, passed to the fragment shader for sampling textures.
 // };
 
+const PI: f32 = 3.1415926538;
+
+@group(1) @binding(0) var u_texture : texture_2d<f32>;
+@group(1) @binding(1) var<uniform> u_pos : vec3f;
+
 // standard vertex shader that applies mvp transform to input position,
 // and passes interpolated world_position, normal, and uv data to fragment shader
 @vertex
@@ -54,17 +59,6 @@ fn vs_main(in: VertexInput) -> VertexOutput {
     return out;
 }
 
-// begin fragment shader ----------------------------
-
-// your custom material uniforms go in @group(1)
-// @group(1) @binding(0) var<uniform> u_color : vec3f;
-
-// @fragment
-// fn fs_main(in: VertexOutput) -> @location(0) vec4f {
-//     return vec4f(abs(sin(u_frame.time)), 0.4, 0.5, 1.0);
-// }
-
-const PI: f32 = 3.1415926538;
 
 // Function to compute an anti-aliased checkerboard pattern.
 fn checkerAA(p: vec2f) -> f32 {
@@ -74,9 +68,6 @@ fn checkerAA(p: vec2f) -> f32 {
     // return step(0., m);
     return smoothstep(0., fwidth(m), m);
 }
-
-@group(1) @binding(0) var u_texture : texture_2d<f32>;
-@group(1) @binding(1) var<uniform> u_pos : vec3f;
 
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
@@ -123,12 +114,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     // rgb += 0.3 * (rgb.xxx + rgb.yyy + rgb.zzz);
     // rgb /= 1.3;
     rgb *= rgb;
-    // if length(UV) < 0.5 {
-    //     rgb += vec3f(1., 1., 0.);
-    // }
     // rgb *= rgb;
     // rgb *= rgb;
-    // rgb *= rgb;
+
     // Compute the checkerboard pattern in the texture.
     // let rgb = vec3f(checkerAA(UV * 180.0 / PI / 30.0));
     let rgb_final = rgb * f32(r > radius);      // Apply visibility based on radius condition.
