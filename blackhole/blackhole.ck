@@ -4,10 +4,10 @@
 0.01 => float ROTATION_ACC;
 
 // camera
-GOrbitCamera cam --> GG.scene();
+GG.scene().camera() @=> GCamera cam;
 cam.posZ(4.);
 cam.lookAt(@(0, 0, 0));
-GG.scene().camera(cam);
+// GG.scene().camera(cam);
 
 // GWindow.fullscreen();
 
@@ -42,14 +42,17 @@ PlaneGeometry plane_geo;
 GMesh universe(plane_geo, universe_mat) --> GG.scene();
 6.6 => universe.sca;
 
-Texture.load(me.dir() + "assets/stars_e_l_c.png") @=> Texture universe_txt;
+// Texture.load(me.dir() + "./assets/me.jpg") @=> Texture universe_txt;
+Texture.load(me.dir() + "./assets/stars_e_l_c.png") @=> Texture universe_txt;
 <<< universe_txt.width(), universe_txt.height() >>>;
 
 @(0.8, 0.2, 10.) => vec3 pos;
 @(0., 0.) => vec2 rotation;
+@(0., 0.) => vec2 view_turn;
 universe_mat.texture(0, universe_txt);
 universe_mat.uniformFloat3(1, pos);
 universe_mat.uniformFloat2(2, rotation);
+universe_mat.uniformFloat2(3, view_turn);
 
 // audio ======================================================================
 Gain input => dac;
@@ -87,6 +90,23 @@ spork ~ addVoice(1::second + 6.7::second, 53+12, 9.1::second, 24.7::second); // 
 spork ~ addVoice(1::second + 8.2::second, 68+12, 9.4::second, 17.8::second); // Ab
 spork ~ addVoice(1::second + 9.6::second, 56+12, 7.9::second, 21.3::second); // low Ab
 spork ~ addVoice(1::second + 15.0::second, 61+12, 9.2::second, 31.8::second); // Db
+
+fun mouse_move() {
+    vec2 init_mousePos, mousePos;
+    while (true) {
+        GG.nextFrame() => now;
+        if (GWindow.mouseLeftDown()) {
+            GWindow.mousePos() => init_mousePos;
+            init_mousePos => mousePos;
+        }
+        if (GWindow.mouseLeft()) {
+            // mouse is down
+            GWindow.mousePos() => mousePos;
+            0.0005 * (mousePos - init_mousePos) +=> view_turn;
+            universe_mat.uniformFloat2(3, view_turn);
+        }
+    }
+} spork ~ mouse_move();
 
 // graphics ===================================================================
 vec3 vel;

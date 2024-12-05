@@ -42,6 +42,7 @@ const PI: f32 = 3.1415926538;
 @group(1) @binding(0) var u_texture : texture_2d<f32>;  // background texture
 @group(1) @binding(1) var<uniform> u_pos : vec3f;       // camera position
 @group(1) @binding(2) var<uniform> u_rotation : vec2f;  // blackhole rotation
+@group(1) @binding(3) var<uniform> u_view_turn : vec2f;  // view turn determined by mouse movement
 
 // standard vertex shader that applies mvp transform to input position,
 // and passes interpolated world_position, normal, and uv data to fragment shader
@@ -70,6 +71,22 @@ fn checkerAA(p: vec2f) -> f32 {
     return smoothstep(0., fwidth(m), m);
 }
 
+fn rotate(vel: vec3f, turn: vec2f) -> vec3f {
+    let pitchRot = mat3x3f(
+        vec3f(1., 0., 0.),
+        vec3f(0., cos(turn.y), -sin(turn.y)),
+        vec3f(0., sin(turn.y), cos(turn.y))
+    );
+
+    let yawRot = mat3x3f(
+        vec3f(cos(turn.x), 0., sin(turn.x)),
+        vec3f(0., 1., 0.),
+        vec3f(-sin(turn.x), 0., cos(turn.x))
+    );
+
+    return normalize(yawRot * pitchRot * vel);
+}
+
 @fragment
 fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     // Transform fragCoord to normalized UV coordinates (-1 to 1).
@@ -82,7 +99,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     let radius = 1.0;
 
     // this is the vel of the ray shooting from the camera to the fragment
-    var vel = normalize(vec3f(-1.0, uv * tan(hfov / 2.0)));
+    var vel = normalize(vec3f(uv * tan(hfov / 2.0), -1.0));
+    vel = rotate(vel, u_view_turn);
+    // vel = rotate(vel, vec2f(0., PI));
+    // vel = rotate(vel, vec2f(0., u_frame.time));
+    // vel = rotate(vel, vec2f(u_frame.time, 0.));
+    vel = vec3f(vel.z, vel.xy);
 
     // Initialize the position of the particle or camera.
     // let dist = 5.;
@@ -103,11 +125,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     }
 
     // Calculate spherical coordinates for texture mapping.
-    let phi1 = 0.5 - (atan2(vel.y, vel.x) / (PI)) ; // Azimuthal angle, normalized to (0,1)
+    let phi1 = 0.5 + (atan2(vel.y, vel.x) / (PI)) ; // Azimuthal angle, normalized to (0,1)
     let theta1 = atan2(length(vel.xy), vel.z) / PI; // Polar angle., normalized to (0,1)
 
     // UV coordinates for the texture.
-    let UV = fract(vec2f(phi1, theta1) + u_rotation); // rotate with time
+    let UV = fract(vec2f(phi1, theta1) - u_rotation); // rotate with time
     // let UV = fract(vec2f(phi1, theta1) + u_rotation * 0.); // rotate with time
 
     // load texture
