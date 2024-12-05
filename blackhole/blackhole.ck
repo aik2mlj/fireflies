@@ -1,6 +1,7 @@
 // constants & setups =========================================================
 0.9 => float BLOOM_INTENSITY;
-0.05 => float ACC;
+0.02 => float ACC;
+0.01 => float ROTATION_ACC;
 
 // camera
 GOrbitCamera cam --> GG.scene();
@@ -45,8 +46,10 @@ Texture.load(me.dir() + "assets/stars_e_l_c.png") @=> Texture universe_txt;
 <<< universe_txt.width(), universe_txt.height() >>>;
 
 @(-0.8, 0.2, -10.) => vec3 pos;
+@(0., 0.) => vec2 rotation;
 universe_mat.texture(0, universe_txt);
 universe_mat.uniformFloat3(1, pos);
+universe_mat.uniformFloat2(2, rotation);
 
 // audio ======================================================================
 Gain input => dac;
@@ -87,6 +90,7 @@ spork ~ addVoice(1::second + 15.0::second, 61+12, 9.2::second, 31.8::second); //
 
 // graphics ===================================================================
 vec3 vel;
+@(0.05, 0.) => vec2 rot_vel;
 while (true) {
     GG.nextFrame() => now;
     // cam.posZ() - GG.dt() * 0.2 => cam.posZ;
@@ -107,4 +111,19 @@ while (true) {
     }
     vel*ACC +=> pos;
     universe_mat.uniformFloat3(1, pos);
+
+    if (UI.isKeyPressed(UI_Key.LeftArrow, true)) {
+        GG.dt() -=> rot_vel.x;
+    } else if (UI.isKeyPressed(UI_Key.RightArrow, true)) {
+        GG.dt() +=> rot_vel.x;
+    }
+    if (UI.isKeyPressed(UI_Key.UpArrow, true)) {
+        GG.dt() -=> rot_vel.y;
+    } else if (UI.isKeyPressed(UI_Key.DownArrow, true)) {
+        GG.dt() +=> rot_vel.y;
+    }
+    rot_vel * ROTATION_ACC +=> rotation;
+    Math.fmod(rotation.x, 1.) => rotation.x;
+    Math.fmod(rotation.y, 1.) => rotation.y;
+    universe_mat.uniformFloat2(2, rotation);
 }

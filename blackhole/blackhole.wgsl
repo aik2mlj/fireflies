@@ -39,8 +39,9 @@
 
 const PI: f32 = 3.1415926538;
 
-@group(1) @binding(0) var u_texture : texture_2d<f32>;
-@group(1) @binding(1) var<uniform> u_pos : vec3f;
+@group(1) @binding(0) var u_texture : texture_2d<f32>;  // background texture
+@group(1) @binding(1) var<uniform> u_pos : vec3f;       // camera position
+@group(1) @binding(2) var<uniform> u_rotation : vec2f;  // blackhole rotation
 
 // standard vertex shader that applies mvp transform to input position,
 // and passes interpolated world_position, normal, and uv data to fragment shader
@@ -62,7 +63,7 @@ fn vs_main(in: VertexInput) -> VertexOutput {
 
 // Function to compute an anti-aliased checkerboard pattern.
 fn checkerAA(p: vec2f) -> f32 {
-    let q = sin(PI * p * vec2f(20.0, 10.0));  // Create a sine pattern with periodicity in x and y directions.
+    let q = sin(PI * p * vec2f(10.0, 10.0));  // Create a sine pattern with periodicity in x and y directions.
     let m = q.x * q.y;                       // Combine the sine waves to create a checkerboard effect.
     // return 0.5 - m / fwidth(m);              // Apply anti-aliasing using the derivative of the function.
     // return step(0., m);
@@ -84,14 +85,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     var vel = normalize(vec3f(1.0, -uv * tan(hfov / 2.0))); 
 
     // Initialize the position of the particle or camera.
+    // let dist = 5.;
     // var pos = vec3f(-dist, 1.0, 0.0);
     let dist = abs(u_pos.z);
-    var pos = vec3f(-dist, u_pos.xy);
+    var pos = vec3f(u_pos.z, u_pos.xy);
     var r = length(pos);                      // Distance from the origin.
-    let dtau = 0.2;                           // Step size for iteration.
+    let dtau = 0.01;                           // Step size for iteration.
 
     // Iterative physics-based motion.
-    while r < dist * 5000. && r > radius {
+    while (r < dist * 2. || r < 500.) && r > radius {
         let ddtau = dtau * r;                 // Step size scales with the current radius.
         pos += vel * ddtau;                   // Update position.
         r = length(pos);                      // Update radius.
@@ -105,7 +107,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     let theta1 = 1. - atan2(length(vel.xy), vel.z) / PI; // Polar angle., normalized to (0,1)
 
     // UV coordinates for the texture.
-    let UV = fract(vec2f(phi1, theta1) + vec2f(u_frame.time * 0.05, 0.0)); // move with time
+    let UV = fract(vec2f(phi1, theta1) + u_rotation); // move with time
 
     // load texture
     let dim: vec2u = textureDimensions(u_texture);
@@ -113,14 +115,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     var rgb = textureLoad(u_texture, coords, 0).rgb;
     // rgb += 0.3 * (rgb.xxx + rgb.yyy + rgb.zzz);
     // rgb /= 1.3;
-    rgb *= rgb;
-    // rgb *= rgb;
-    // rgb *= rgb;
+    rgb = pow(rgb, vec3f(2.4));
 
-    // Compute the checkerboard pattern in the texture.
-    // let rgb = vec3f(checkerAA(UV * 180.0 / PI / 30.0));
+    // default background: checkerboard pattern
+    // rgb = vec3f(checkerAA(UV * 180.0 / PI / 30.0));
     let rgb_final = rgb * f32(r > radius);      // Apply visibility based on radius condition.
-    // let rgb_final = vec3f(0.2, 0.3, 0.1);
 
     // Return the final color.
     return vec4f(rgb_final, 1.0);            // Output the color with alpha = 1.0.
