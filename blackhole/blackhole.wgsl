@@ -103,11 +103,12 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     }
 
     // Calculate spherical coordinates for texture mapping.
-    let phi1 = atan2(vel.y, vel.x) / (PI); // Azimuthal angle, normalized to (0,1)
+    let phi1 = 0.5 - (atan2(vel.y, vel.x) / (PI)) ; // Azimuthal angle, normalized to (0,1)
     let theta1 = atan2(length(vel.xy), vel.z) / PI; // Polar angle., normalized to (0,1)
 
     // UV coordinates for the texture.
-    let UV = fract(vec2f(phi1, theta1) + u_rotation); // move with time
+    let UV = fract(vec2f(phi1, theta1) + u_rotation); // rotate with time
+    // let UV = fract(vec2f(phi1, theta1) + u_rotation * 0.); // rotate with time
 
     // load texture
     let dim: vec2u = textureDimensions(u_texture);
