@@ -45,7 +45,7 @@ GMesh universe(plane_geo, universe_mat) --> GG.scene();
 Texture.load(me.dir() + "assets/stars_e_l_c.png") @=> Texture universe_txt;
 <<< universe_txt.width(), universe_txt.height() >>>;
 
-@(-0.8, 0.2, -10.) => vec3 pos;
+@(0.8, 0.2, 10.) => vec3 pos;
 @(0., 0.) => vec2 rotation;
 universe_mat.texture(0, universe_txt);
 universe_mat.uniformFloat3(1, pos);
@@ -95,19 +95,19 @@ while (true) {
     GG.nextFrame() => now;
     // cam.posZ() - GG.dt() * 0.2 => cam.posZ;
     if (UI.isKeyPressed(UI_Key.A, true)) {
-        GG.dt() +=> vel.x;
-    } else if (UI.isKeyPressed(UI_Key.D, true)) {
         GG.dt() -=> vel.x;
+    } else if (UI.isKeyPressed(UI_Key.D, true)) {
+        GG.dt() +=> vel.x;
     }
     if (UI.isKeyPressed(UI_Key.LeftShift, true)) {
-        GG.dt() -=> vel.y;
-    } else if (UI.isKeyPressed(UI_Key.LeftCtrl, true)) {
         GG.dt() +=> vel.y;
+    } else if (UI.isKeyPressed(UI_Key.LeftCtrl, true)) {
+        GG.dt() -=> vel.y;
     }
     if (UI.isKeyPressed(UI_Key.W, true)) {
-        GG.dt() +=> vel.z;
-    } else if (UI.isKeyPressed(UI_Key.S, true)) {
         GG.dt() -=> vel.z;
+    } else if (UI.isKeyPressed(UI_Key.S, true)) {
+        GG.dt() +=> vel.z;
     }
     vel*ACC +=> pos;
     universe_mat.uniformFloat3(1, pos);
@@ -118,9 +118,9 @@ while (true) {
         GG.dt() +=> rot_vel.x;
     }
     if (UI.isKeyPressed(UI_Key.UpArrow, true)) {
-        GG.dt() -=> rot_vel.y;
-    } else if (UI.isKeyPressed(UI_Key.DownArrow, true)) {
         GG.dt() +=> rot_vel.y;
+    } else if (UI.isKeyPressed(UI_Key.DownArrow, true)) {
+        GG.dt() -=> rot_vel.y;
     }
     rot_vel * ROTATION_ACC +=> rotation;
     Math.fmod(rotation.x, 1.) => rotation.x;

@@ -81,8 +81,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     let hfov = 2.;                           // Horizontal field of view.
     let radius = 1.0;
 
-    // Calculate velocity based on the field of view and UV.
-    var vel = normalize(vec3f(1.0, -uv * tan(hfov / 2.0))); 
+    // this is the vel of the ray shooting from the camera to the fragment
+    var vel = normalize(vec3f(-1.0, uv * tan(hfov / 2.0)));
 
     // Initialize the position of the particle or camera.
     // let dist = 5.;
@@ -90,7 +90,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     let dist = abs(u_pos.z);
     var pos = vec3f(u_pos.z, u_pos.xy);
     var r = length(pos);                      // Distance from the origin.
-    let dtau = 0.01;                           // Step size for iteration.
+    let dtau = 0.05;                           // Step size for iteration.
 
     // Iterative physics-based motion.
     while (r < dist * 2. || r < 500.) && r > radius {
@@ -103,8 +103,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     }
 
     // Calculate spherical coordinates for texture mapping.
-    let phi1 = 1. - atan2(vel.y, vel.x) / (PI); // Azimuthal angle, normalized to (0,1)
-    let theta1 = 1. - atan2(length(vel.xy), vel.z) / PI; // Polar angle., normalized to (0,1)
+    let phi1 = atan2(vel.y, vel.x) / (PI); // Azimuthal angle, normalized to (0,1)
+    let theta1 = atan2(length(vel.xy), vel.z) / PI; // Polar angle., normalized to (0,1)
 
     // UV coordinates for the texture.
     let UV = fract(vec2f(phi1, theta1) + u_rotation); // move with time
