@@ -93,7 +93,7 @@ spork ~ addVoice(7::second + 8.2::second, 68+12, 9.4::second, 17.8::second); // 
 spork ~ addVoice(7::second + 9.6::second, 56+12, 7.9::second, 21.3::second); // low Ab
 spork ~ addVoice(7::second + 15.0::second, 61+12, 9.2::second, 31.8::second); // Db
 
-fun mouse_move() {
+fun void mouse_move() {
     vec2 init_mousePos, mousePos;
     while (true) {
         GG.nextFrame() => now;
@@ -111,6 +111,13 @@ fun mouse_move() {
 } spork ~ mouse_move();
 
 // graphics ===================================================================
+
+fun vec3 rotate(vec3 o, vec2 turn) {
+    @(o.x, Math.cos(turn.y)*o.y-Math.sin(turn.y)*o.z, Math.sin(turn.y)*o.y+Math.cos(turn.y)*o.z) => vec3 o1;
+    @(Math.cos(turn.x)*o1.x+Math.sin(turn.x)*o1.z, o1.y, -Math.sin(turn.x)*o1.x+Math.cos(turn.x)*o1.z) => vec3 o2;
+    return o2;
+}
+
 vec3 vel;
 @(0.02, 0.) => vec2 rot_vel;
 while (true) {
@@ -119,22 +126,25 @@ while (true) {
     // hide mouse cursor
     UI.setMouseCursor(UI_MouseCursor.None);
 
+    @(0,0,0) => vec3 acc_no_rot;
     // cam.posZ() - GG.dt() * 0.2 => cam.posZ;
     if (UI.isKeyPressed(UI_Key.A, true)) {
-        GG.dt() -=> vel.x;
+        GG.dt() -=> acc_no_rot.x;
     } else if (UI.isKeyPressed(UI_Key.D, true)) {
-        GG.dt() +=> vel.x;
+        GG.dt() +=> acc_no_rot.x;
     }
     if (UI.isKeyPressed(UI_Key.LeftShift, true)) {
-        GG.dt() +=> vel.y;
+        GG.dt() +=> acc_no_rot.y;
     } else if (UI.isKeyPressed(UI_Key.LeftCtrl, true)) {
-        GG.dt() -=> vel.y;
+        GG.dt() -=> acc_no_rot.y;
     }
     if (UI.isKeyPressed(UI_Key.W, true)) {
-        GG.dt() -=> vel.z;
+        GG.dt() -=> acc_no_rot.z;
     } else if (UI.isKeyPressed(UI_Key.S, true)) {
-        GG.dt() +=> vel.z;
+        GG.dt() +=> acc_no_rot.z;
     }
+    rotate(acc_no_rot, -1. * view_turn) => vec3 acc;
+    acc +=> vel;
     vel*ACC +=> pos;
     universe_mat.uniformFloat3(1, pos);
 
