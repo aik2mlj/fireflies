@@ -72,6 +72,11 @@ fn checkerAA(p: vec2f) -> f32 {
     return smoothstep(0., fwidth(m), m);
 }
 
+fn linearstep(A: f32, B: f32, X: f32) -> f32 {
+    let t = (X - A) / (B - A);
+    return clamp(t, 0., 1.);
+}
+
 fn rotate(vel: vec3f, turn: vec2f) -> vec3f {
     let pitchRot = mat3x3f(
         vec3f(1., 0., 0.),
@@ -113,13 +118,15 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     let dist = abs(u_pos.z);
     var pos = vec3f(u_pos.z, u_pos.xy);
     var r = length(pos);                      // Distance from the origin.
-    let dtau = 0.005;                           // Step size for iteration.
+    let dtau = 0.008;                           // Step size for iteration.
 
     // accretion disk
     let disk_inner_radius = 1.1;  // Inner radius of the disk.
     let disk_outer_radius = 2.5;  // Outer radius of the disk.
-    let disk_brightness = 2.0;    // Brightness of the disk.
-    let disk_color = vec3f(1.0, 0.8, 0.6); // Color of the disk.
+    let disk_brightness = 3.0;    // Brightness of the disk.
+    let disk_color = vec3f(0.9, 0.8, 0.9); // Color of the disk.
+    var disk_rgb = vec3f(0.);
+    var get_disk = false;
 
     // Iterative physics-based motion.
     while (r < dist * 2. || r < 20.) && r > radius {
@@ -130,21 +137,23 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
          // Disk Intersection
         if r > disk_inner_radius && r < disk_outer_radius {
             let disk_height = abs(pos.z); // Z determines vertical position.
-            if disk_height < 0.01 {     // Thin accretion disk.
+            if disk_height < 0.01 && !get_disk {     // Thin accretion disk.
             // Add color from the disk.
-                let phi = 0.5 * atan2(vel.y, vel.x) / (PI); // Disk azimuthal angle.
+                let phi = 5. * atan2(vel.z, vel.x) / (PI); // Disk azimuthal angle.
                 // let theta = atan2(length(vel.xy), vel.z) / PI;
                 let theta = 0.;
-                let local_uv = fract(vec2f(phi, theta) - u_rotation);      // Simple radial texture for the disk.
+                let local_uv = fract(vec2f(phi, theta) - u_rotation * 2.);      // Simple radial texture for the disk.
                 let dim: vec2u = textureDimensions(u_noise_texture);
                 let coords = vec2i(local_uv * vec2f(dim));
-                var disk_rgb = textureLoad(u_noise_texture, coords, 0).rgb;
+                disk_rgb = textureLoad(u_noise_texture, coords, 0).rgb;
                 // disk_rgb = pow(disk_rgb, vec3f(2));
-                disk_rgb = smoothstep(vec3f(-1.), vec3f(0.9), disk_rgb);
+                disk_rgb = smoothstep(vec3f(-2.), vec3f(0.9), disk_rgb);
                 disk_rgb *= disk_color * disk_brightness;
+                disk_rgb *= smoothstep(disk_inner_radius, disk_outer_radius, r) * smoothstep(disk_outer_radius, disk_inner_radius, r);
+                get_disk = true;
 
                 // var disk_rgb = disk_color * disk_brightness;
-                return vec4f(disk_rgb, smoothstep(disk_outer_radius, disk_inner_radius, r)); // Exit early if disk is hit.
+                // return vec4f(disk_rgb, 1.); // Exit early if disk is hit.
             }
         }
 
@@ -171,8 +180,9 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
     // default background: checkerboard pattern
     // rgb = vec3f(checkerAA(UV * 180.0 / PI / 30.0));
-    let rgb_final = rgb * f32(r > radius);      // Apply visibility based on radius condition.
+    rgb = rgb * f32(r > radius);      // Apply visibility based on radius condition.
     // let rgb_final = mix(rgb, disk_rgb, f32(r > disk_inner_radius && r < disk_outer_radius));
+    let rgb_final = disk_rgb + rgb;
 
     // Return the final color.
     return vec4f(rgb_final, 1.0);            // Output the color with alpha = 1.0.
