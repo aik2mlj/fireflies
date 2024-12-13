@@ -45,6 +45,7 @@ const PI: f32 = 3.1415926538;
 @group(1) @binding(3) var<uniform> u_view_turn : vec2f;  // view turn determined by mouse movement
 @group(1) @binding(4) var u_noise_texture : texture_2d<f32>;  // noise texture for accretion disk
 @group(1) @binding(5) var<uniform> u_radius : f32;  // blackhole radius
+@group(1) @binding(6) var<uniform> u_hfov : f32;  // blackhole radius
 
 // standard vertex shader that applies mvp transform to input position,
 // and passes interpolated world_position, normal, and uv data to fragment shader
@@ -101,12 +102,8 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     // let uv = (2.0 * fragCoord.xy - iResolution) / iResolution.x; // Normalize coordinates relative to resolution.
     let uv = 2. * in.v_uv - 1;
 
-    // Parameters for the scene.
-    let hfov = 2.;                           // Horizontal field of view.
-    // let radius = 1.0;
-
     // this is the vel of the ray shooting from the camera to the fragment
-    var vel = normalize(vec3f(uv * tan(hfov / 2.0), -1.0));
+    var vel = normalize(vec3f(uv * tan(u_hfov / 2.0), -1.0));
     vel = rotate(vel, u_view_turn);
     // vel = rotate(vel, vec2f(0., PI));
     // vel = rotate(vel, vec2f(0., u_frame.time));

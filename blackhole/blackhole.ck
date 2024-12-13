@@ -9,7 +9,7 @@ cam.posZ(4.);
 cam.lookAt(@(0, 0, 0));
 // GG.scene().camera(cam);
 
-// GWindow.fullscreen();
+GWindow.fullscreen();
 
 // remove light
 GG.scene().light() @=> GLight light;
@@ -51,12 +51,14 @@ Texture.load(me.dir() + "./assets/noise.jpg") @=> Texture noise_txt;
 @(0., 0.) => vec2 rotation;
 @(0., 0.) => vec2 view_turn;
 1. => float radius;
+2. => float hfov;
 universe_mat.texture(0, universe_txt);
 universe_mat.uniformFloat3(1, pos);
 universe_mat.uniformFloat2(2, rotation);
 universe_mat.uniformFloat2(3, view_turn);
 universe_mat.texture(4, noise_txt);
 universe_mat.uniformFloat(5, radius);
+universe_mat.uniformFloat(6, hfov);
 
 vec3 vel;
 @(0.02, 0.) => vec2 rot_vel;
@@ -118,8 +120,7 @@ fun void bh_sound() {
         // pan
         Math.sin(-Math.atan2(pos.x, pos.z) - view_turn.x) => pan.pan;
     }
-}
-spork ~ bh_sound();
+} spork ~ bh_sound();
 
 // mouse ======================================================================
 
@@ -134,7 +135,7 @@ fun void mouse_move() {
         if (GWindow.mouseLeft()) {
             // mouse is down
             GWindow.mousePos() => mousePos;
-            0.0005 * (mousePos - init_mousePos) +=> view_turn;
+            0.0001 * (mousePos - init_mousePos) +=> view_turn;
             universe_mat.uniformFloat2(3, view_turn);
         }
     }
@@ -169,8 +170,8 @@ while (true) {
     // hide mouse cursor
     UI.setMouseCursor(UI_MouseCursor.None);
 
+    // navigate in the space
     @(0,0,0) => vec3 acc_no_rot;
-    // cam.posZ() - GG.dt() * 0.2 => cam.posZ;
     if (UI.isKeyPressed(UI_Key.A, true)) {
         GG.dt() -=> acc_no_rot.x;
     } else if (UI.isKeyPressed(UI_Key.D, true)) {
@@ -195,6 +196,7 @@ while (true) {
     vel*ACC +=> pos;
     universe_mat.uniformFloat3(1, pos);
 
+    // black hole rotation
     if (UI.isKeyPressed(UI_Key.LeftArrow, true)) {
         GG.dt() -=> rot_vel.x;
     } else if (UI.isKeyPressed(UI_Key.RightArrow, true)) {
@@ -210,8 +212,15 @@ while (true) {
     Math.fmod(rotation.y, 1.) => rotation.y;
     universe_mat.uniformFloat2(2, rotation);
 
+    // pumping the black hole
     if (UI.isKeyPressed(UI_Key.Enter, false)) {
-        // pumping the black hole
         spork ~ radius_pumping();
     }
+
+    // change hfov with mouse wheels and middle click to reset.
+    GWindow.scrollY() * 0.05 -=> hfov;
+    if (UI.isKeyPressed(UI_Key.MouseMiddle, false)) {
+        2. => hfov;
+    }
+    universe_mat.uniformFloat(6, hfov);
 }
