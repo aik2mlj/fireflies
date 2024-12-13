@@ -44,6 +44,7 @@ const PI: f32 = 3.1415926538;
 @group(1) @binding(2) var<uniform> u_rotation : vec2f;  // blackhole rotation
 @group(1) @binding(3) var<uniform> u_view_turn : vec2f;  // view turn determined by mouse movement
 @group(1) @binding(4) var u_noise_texture : texture_2d<f32>;  // noise texture for accretion disk
+@group(1) @binding(5) var<uniform> u_radius : f32;  // blackhole radius
 
 // standard vertex shader that applies mvp transform to input position,
 // and passes interpolated world_position, normal, and uv data to fragment shader
@@ -102,7 +103,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
     // Parameters for the scene.
     let hfov = 2.;                           // Horizontal field of view.
-    let radius = 1.0;
+    // let radius = 1.0;
 
     // this is the vel of the ray shooting from the camera to the fragment
     var vel = normalize(vec3f(uv * tan(hfov / 2.0), -1.0));
@@ -115,21 +116,21 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     // Initialize the position of the particle or camera.
     // let dist = 5.;
     // var pos = vec3f(-dist, 1.0, 0.0);
-    let dist = abs(u_pos.z);
+    let dist = length(u_pos);
     var pos = vec3f(u_pos.z, u_pos.xy);
     var r = length(pos);                      // Distance from the origin.
     let dtau = 0.008;                           // Step size for iteration.
 
     // accretion disk
-    let disk_inner_radius = 1.1;  // Inner radius of the disk.
-    let disk_outer_radius = 2.5;  // Outer radius of the disk.
-    let disk_brightness = 3.0;    // Brightness of the disk.
-    let disk_color = vec3f(0.9, 0.8, 0.9); // Color of the disk.
+    let disk_inner_radius = u_radius + 0.1;  // Inner radius of the disk.
+    let disk_outer_radius = u_radius * 2.5 ;  // Outer radius of the disk.
+    let disk_brightness = 5.0;    // Brightness of the disk.
+    let disk_color = vec3f(1., 0.8, 0.6); // Color of the disk.
     var disk_rgb = vec3f(0.);
     var get_disk = false;
 
     // Iterative physics-based motion.
-    while (r < dist * 2. || r < 20.) && r > radius {
+    while (r < dist * 2. || r < 20.) && r > u_radius {
         let ddtau = dtau * r;                 // Step size scales with the current radius.
         pos += vel * ddtau;                   // Update position.
         r = length(pos);                      // Update radius.
@@ -180,7 +181,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
 
     // default background: checkerboard pattern
     // rgb = vec3f(checkerAA(UV * 180.0 / PI / 30.0));
-    rgb = rgb * f32(r > radius);      // Apply visibility based on radius condition.
+    rgb = rgb * f32(r > u_radius);      // Apply visibility based on radius condition.
     // let rgb_final = mix(rgb, disk_rgb, f32(r > disk_inner_radius && r < disk_outer_radius));
     let rgb_final = disk_rgb + rgb;
 
