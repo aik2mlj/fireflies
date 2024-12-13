@@ -43,6 +43,7 @@ const PI: f32 = 3.1415926538;
 @group(1) @binding(1) var<uniform> u_pos : vec3f;       // camera position
 @group(1) @binding(2) var<uniform> u_rotation : vec2f;  // blackhole rotation
 @group(1) @binding(3) var<uniform> u_view_turn : vec2f;  // view turn determined by mouse movement
+@group(1) @binding(4) var u_noise_texture : texture_2d<f32>;  // noise texture for accretion disk
 
 // standard vertex shader that applies mvp transform to input position,
 // and passes interpolated world_position, normal, and uv data to fragment shader
@@ -112,13 +113,41 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     let dist = abs(u_pos.z);
     var pos = vec3f(u_pos.z, u_pos.xy);
     var r = length(pos);                      // Distance from the origin.
-    let dtau = 0.05;                           // Step size for iteration.
+    let dtau = 0.005;                           // Step size for iteration.
+
+    // accretion disk
+    let disk_inner_radius = 1.1;  // Inner radius of the disk.
+    let disk_outer_radius = 2.5;  // Outer radius of the disk.
+    let disk_brightness = 2.0;    // Brightness of the disk.
+    let disk_color = vec3f(1.0, 0.8, 0.6); // Color of the disk.
 
     // Iterative physics-based motion.
-    while (r < dist * 2. || r < 500.) && r > radius {
+    while (r < dist * 2. || r < 20.) && r > radius {
         let ddtau = dtau * r;                 // Step size scales with the current radius.
         pos += vel * ddtau;                   // Update position.
         r = length(pos);                      // Update radius.
+
+         // Disk Intersection
+        if r > disk_inner_radius && r < disk_outer_radius {
+            let disk_height = abs(pos.z); // Z determines vertical position.
+            if disk_height < 0.01 {     // Thin accretion disk.
+            // Add color from the disk.
+                let phi = 0.5 * atan2(vel.y, vel.x) / (PI); // Disk azimuthal angle.
+                // let theta = atan2(length(vel.xy), vel.z) / PI;
+                let theta = 0.;
+                let local_uv = fract(vec2f(phi, theta) - u_rotation);      // Simple radial texture for the disk.
+                let dim: vec2u = textureDimensions(u_noise_texture);
+                let coords = vec2i(local_uv * vec2f(dim));
+                var disk_rgb = textureLoad(u_noise_texture, coords, 0).rgb;
+                // disk_rgb = pow(disk_rgb, vec3f(2));
+                disk_rgb = smoothstep(vec3f(-1.), vec3f(0.9), disk_rgb);
+                disk_rgb *= disk_color * disk_brightness;
+
+                // var disk_rgb = disk_color * disk_brightness;
+                return vec4f(disk_rgb, smoothstep(disk_outer_radius, disk_inner_radius, r)); // Exit early if disk is hit.
+            }
+        }
+
         let er = pos / r;                     // Unit vector in the radial direction.
         let c = cross(vel, er);               // Perpendicular vector for angular momentum.
         vel -= ddtau * dot(c, c) * er / (r * r); // Update velocity based on angular momentum.
@@ -143,6 +172,7 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     // default background: checkerboard pattern
     // rgb = vec3f(checkerAA(UV * 180.0 / PI / 30.0));
     let rgb_final = rgb * f32(r > radius);      // Apply visibility based on radius condition.
+    // let rgb_final = mix(rgb, disk_rgb, f32(r > disk_inner_radius && r < disk_outer_radius));
 
     // Return the final color.
     return vec4f(rgb_final, 1.0);            // Output the color with alpha = 1.0.
