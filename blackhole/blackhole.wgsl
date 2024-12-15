@@ -45,7 +45,9 @@ const PI: f32 = 3.1415926538;
 @group(1) @binding(3) var<uniform> u_view_turn : vec2f;  // view turn determined by mouse movement
 @group(1) @binding(4) var u_noise_texture : texture_2d<f32>;  // noise texture for accretion disk
 @group(1) @binding(5) var<uniform> u_radius : f32;  // blackhole radius
-@group(1) @binding(6) var<uniform> u_hfov : f32;  // blackhole radius
+@group(1) @binding(6) var<uniform> u_hfov : f32;
+@group(1) @binding(7) var<uniform> u_disk_brightness : f32;  // disk brightness
+@group(1) @binding(8) var<uniform> u_disk_color : vec3f;  // disk color
 
 // standard vertex shader that applies mvp transform to input position,
 // and passes interpolated world_position, normal, and uv data to fragment shader
@@ -121,8 +123,6 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
     // accretion disk
     let disk_inner_radius = u_radius + 0.1;  // Inner radius of the disk.
     let disk_outer_radius = u_radius * 2.5 ;  // Outer radius of the disk.
-    let disk_brightness = 5.0;    // Brightness of the disk.
-    let disk_color = vec3f(1., 0.8, 0.6); // Color of the disk.
     var disk_rgb = vec3f(0.);
     var get_disk = false;
 
@@ -146,11 +146,11 @@ fn fs_main(in: VertexOutput) -> @location(0) vec4f {
                 disk_rgb = textureLoad(u_noise_texture, coords, 0).rgb;
                 // disk_rgb = pow(disk_rgb, vec3f(2));
                 disk_rgb = smoothstep(vec3f(-2.), vec3f(0.9), disk_rgb);
-                disk_rgb *= disk_color * disk_brightness;
+                disk_rgb *= u_disk_color * u_disk_brightness;
                 disk_rgb *= smoothstep(disk_inner_radius, disk_outer_radius, r) * smoothstep(disk_outer_radius, disk_inner_radius, r);
                 get_disk = true;
 
-                // var disk_rgb = disk_color * disk_brightness;
+                // var disk_rgb = u_disk_color * u_disk_brightness;
                 // return vec4f(disk_rgb, 1.); // Exit early if disk is hit.
             }
         }
